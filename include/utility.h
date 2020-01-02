@@ -29,8 +29,8 @@ typedef Eigen::SparseMatrix<DT> SMat;
 typedef AngleAxis<DT> AxisAngle;
 
 Mat3 AngleAxis2Matrix(Vec3 const & angle_axis);
-
 Vec3 Quaternion2AngleAxis(Vec4 const & quaternion);
+Vec4 AngleAxis2Quaternion(Vec3 const & angle_axis);
 
 Vec3 RotatePoint(Vec3 const & angle_axis, Vec3 const & point);
 
@@ -187,8 +187,11 @@ std::vector<size_t> SortIndexes(const std::vector<T> &v, bool increase = true)
     return idx;
 }
 
-bool ReadLinesFromFile(std::string const & file_path, std::vector<std::string> & lines);
 bool ReadCameraGroup(std::string const & camera_group_file,
                      std::unordered_map<size_t, size_t> & camera_group_map);
+
+bool ReadLinesFromFile(std::string const & file_path, std::vector<std::string> & lines);
+
+std::string JoinPath(std::string const & folder, std::string const & file);
 
 #endif // UTILITY_H

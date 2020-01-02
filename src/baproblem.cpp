@@ -113,22 +113,26 @@ void BAProblem::Create(size_t pose_num, size_t group_num, size_t point_num, size
     std::cout << "[Create] Allocate memory of " << memory << " GB.\n";
 }
 
-bool BAProblem::Initialize(BundleBlock const & bundle_block, std::unordered_map<size_t, size_t> const & camera_group)
+bool BAProblem::Initialize(BundleBlock const & bundle_block)
 {
+    std::vector<size_t> group_indexes = bundle_block.GroupIndexes();
     std::vector<size_t> camera_indexes = bundle_block.CameraIndexes();
     std::vector<size_t> point_indexes = bundle_block.TrackIndexes();
     std::vector<size_t> projection_indexes = bundle_block.ProjectionIndexes();
+    size_t group_num = group_indexes.size();
     size_t pose_num = camera_indexes.size();
-    size_t group_num = 0;
     size_t point_num = point_indexes.size();
     size_t projection_num = projection_indexes.size();
 
-    std::unordered_map<size_t, size_t>::const_iterator it = camera_group.begin();
-    for (; it != camera_group.end(); it++)
-    {
-        group_num = std::max(group_num, it->second + 1);
-    }
     Create(pose_num, group_num, point_num, projection_num);
+
+    std::unordered_map<size_t, size_t> group_map;
+    for (size_t i = 0; i < group_indexes.size(); i++)
+    {
+        size_t index = group_indexes[i];
+        group_map[index] = i;
+        group_index_map_[i] = index;
+    }
 
     max_degree_ = 0;
     std::unordered_map<size_t, size_t> pose_map;
@@ -139,12 +143,11 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block, std::unordered_map<
         pose_index_map_[i] = index;
 
         BundleBlock::DCamera const & camera = bundle_block.GetCamera(index);
-        pose_path_map_[i] = camera.image_path;
+        BundleBlock::DGroup const & group = bundle_block.GetGroup(camera.group_id);
         SetPose(i, camera.axis_angle, camera.translation);
-
-        assert(camera_group.find(index) != camera_group.end() && "Camera has no group");
-        size_t group_index = camera_group.find(index)->second;
-        SetIntrinsic(group_index, i, camera.intrinsic);
+        assert(group_map.find(group.id) != group_map.end() && "Camera has no group");
+        size_t group_index = group_map[group.id];
+        SetIntrinsic(group_index, i, group.intrinsic);
         pose_projection_map_[i] = std::unordered_map<size_t, size_t>();
 
         max_degree_ = std::max(max_degree_, camera.linked_cameras.size());
@@ -155,6 +158,7 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block, std::unordered_map<
     {
         size_t index = point_indexes[i];
         point_map[index] = i;
+        point_index_map_[i] = index;
         BundleBlock::DTrack const & track = bundle_block.GetTrack(index);
         SetPoint(i, track.position);
         SetColor(i, track.color);
@@ -213,6 +217,34 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block, std::unordered_map<
                  << "max degree: " << max_degree_ << "\n";
     std::cout << local_stream.str();
     stream_ << local_stream.str();
+}
+
+void BAProblem::Update(BundleBlock & bundle_block) const
+{
+    size_t group_num = GroupNum();
+    size_t pose_num = PoseNum();
+    size_t point_num = PointNum();
+
+    for (size_t i = 0; i < group_num; i++)
+    {
+        size_t group_index = group_index_map_.find(i)->second;
+        BundleBlock::DGroup & group = bundle_block.GetGroup(group_index);
+        GetIntrinsic(i, group.intrinsic);
+    }
+
+    for (size_t i = 0; i < pose_num; i++)
+    {
+        size_t pose_index = pose_index_map_.find(i)->second;
+        BundleBlock::DCamera & camera = bundle_block.GetCamera(pose_index);
+        GetPose(i, camera.axis_angle, camera.translation);
+    }
+
+    for (size_t i = 0; i < point_num; i++)
+    {
+        size_t point_index = point_index_map_.find(i)->second;
+        BundleBlock::DTrack & track = bundle_block.GetTrack(point_index);
+        GetPoint(i, track.position);
+    }
 }
 
 void BAProblem::SetIntrinsic(size_t idx, size_t camera_index, Vec6 const & intrinsic)

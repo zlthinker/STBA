@@ -2,6 +2,18 @@
 
 #include <fstream>
 
+std::vector<size_t> BundleBlock::GroupIndexes() const
+{
+    std::vector<size_t> indexes;
+    indexes.reserve(groups_.size());
+    std::unordered_map<size_t, DGroup>::const_iterator it = groups_.begin();
+    for (; it != groups_.end(); it++)
+    {
+        indexes.push_back(it->first);
+    }
+    return indexes;
+}
+
 std::vector<size_t> BundleBlock::CameraIndexes() const
 {
     std::vector<size_t> indexes;
@@ -36,6 +48,20 @@ std::vector<size_t> BundleBlock::ProjectionIndexes() const
         indexes.push_back(it->first);
     }
     return indexes;
+}
+
+BundleBlock::DGroup const & BundleBlock::GetGroup(size_t id) const
+{
+    std::unordered_map<size_t, DGroup>::const_iterator it = groups_.find(id);
+    assert(it != groups_.end() && "[BundleBlock::GetGroup] Group id not found");
+    return it->second;
+}
+
+BundleBlock::DGroup & BundleBlock::GetGroup(size_t id)
+{
+    std::unordered_map<size_t, DGroup>::iterator it = groups_.find(id);
+    assert(it != groups_.end() && "[BundleBlock::GetGroup] Group id not found");
+    return it->second;
 }
 
 BundleBlock::DCamera const & BundleBlock::GetCamera(size_t id) const
@@ -137,7 +163,7 @@ void BundleBlock::GetCommonPoints(std::unordered_map<size_t, std::unordered_map<
 bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string const & images_path, std::string const & points_path)
 {
     // Read camera intrinsics
-    std::unordered_map<size_t, Vec6> intrinsic_map;
+    std::cout << "Load intrinsics.\n";
     {
         std::ifstream cameras_file_stream(cameras_path, std::ios::in);
         if (!cameras_file_stream)
@@ -190,12 +216,13 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
 
             Vec6 intrinsic;
             intrinsic << fx, u, v, k1, k2, k3;
-            intrinsic_map[cam_idx] = intrinsic;
+            groups_[cam_idx] = DGroup(cam_idx, intrinsic, width, height);
         }
         cameras_file_stream.close();
     }
 
     // Read camera extrinsics
+    std::cout << "Load extrinsics.\n";
     {
         std::ifstream images_file_stream(images_path, std::ios::in);
         if (!images_file_stream)
@@ -221,12 +248,11 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
             std::istringstream image_stream(line);
             image_stream >> image_idx >> qw >> qx >> qy >> qz
                     >> tx >> ty >> tz >> camera_idx >> image_path;
+            std::cout << image_idx << "\t" << image_path << "\n";
 
             Vec3 angle_axis = Quaternion2AngleAxis(Vec4(qw, qx, qy, qz));
-            std::unordered_map<size_t, Vec6>::const_iterator it = intrinsic_map.find(camera_idx);
-            Vec6 const & intrinsic = it->second;
 
-            DCamera camera(image_idx, intrinsic, angle_axis, Vec3(tx, ty, tz));
+            DCamera camera(image_idx, camera_idx, angle_axis, Vec3(tx, ty, tz), image_path);
 
             // read projections
             std::unordered_set<size_t> track_ids;
@@ -235,7 +261,7 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
             while (!observations_stream.eof() && !observations_stream.bad())
             {
                 double px, py;
-                size_t track_idx;
+                int track_idx;
                 observations_stream >> px >> py >> track_idx;
 
                 if (track_idx == -1 || track_ids.find(track_idx) != track_ids.end()) continue;
@@ -259,6 +285,7 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
     }
 
     // Read points
+    std::cout << "Load points.\n";
     {
         std::ifstream point_file_stream(points_path, std::ios::in);
         if (!point_file_stream)
@@ -326,6 +353,68 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
     Print();
 
     return true;
+}
+
+void BundleBlock::SaveColmapTxt(std::string const & cameras_path, std::string const & images_path, std::string const & points_path) const
+{
+    // save camera intrinsics
+    {
+        std::ofstream stream(cameras_path);
+        std::unordered_map<size_t, DGroup>::const_iterator it = groups_.begin();
+        for (; it != groups_.end(); it++)
+        {
+            DGroup const & group = it->second;
+            /* some mis-alignment here.
+             * Our intrinsic is parameterized by <focal u v k1 k2 k3>, while the OPENCV model is <fx fy u v k1 k2 p1 p2>
+             */
+            stream << group.id << " OPENCV " << group.width << " " << group.height << " " << group.intrinsic[0] << " " << group.intrinsic[0] << " "
+                   << group.intrinsic[1] << " " << group.intrinsic[2] << " " << group.intrinsic[3] << " " << group.intrinsic[4] << " 0 0\n";
+        }
+        stream.close();
+    }
+
+    // save camera extrinsics
+    {
+        std::ofstream stream(images_path);
+        std::unordered_map<size_t, DCamera>::const_iterator it = cameras_.begin();
+        for (; it != cameras_.end(); it++)
+        {
+            DCamera const & camera = it->second;
+            Vec4 quaternion = AngleAxis2Quaternion(camera.axis_angle);
+            stream << camera.id << " ";
+            for (size_t i = 0; i < 4; i++)  stream << quaternion[i] << " ";
+            for (size_t i = 0; i < 3; i++) stream << camera.translation[i] << " ";
+            stream << camera.group_id << " " << camera.image_path << "\n";
+            std::unordered_set<size_t> const & linked_projections = camera.linked_projections;
+            std::unordered_set<size_t>::const_iterator it = linked_projections.begin();
+            for (; it != linked_projections.end(); it++)
+            {
+                size_t proj_index = *it;
+                DProjection const & projection = GetProjection(proj_index);
+                stream << projection.projection[0] << " " << projection.projection[1] << " " << projection.track_id << " ";
+            }
+            stream << "\n";
+        }
+        stream.close();
+    }
+
+    // save points
+    {
+        std::ofstream stream(points_path);
+        std::unordered_map<size_t, DTrack>::const_iterator it = tracks_.begin();
+        for (; it != tracks_.end(); it++)
+        {
+            DTrack const & track = it->second;
+            /* some mis-alignment here.
+             * The error and the track info are not saved here, since they are a bit redundant.
+             */
+            stream << track.id << " ";
+            for (size_t i = 0; i < 3; i++)  stream << track.position[i] << " ";
+            for (size_t i = 0; i < 3; i++)  stream << track.color[i] << " ";
+            stream << "\n";
+        }
+        stream.close();
+    }
 }
 
 void BundleBlock::Print() const

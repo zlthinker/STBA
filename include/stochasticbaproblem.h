@@ -30,7 +30,7 @@ public:
                            std::vector<std::vector<Vec3> > const & aug_point_diagonal) const;
     double EvaluateRSquare2(VecX const & aug_diagonal);
     bool StepAccept();
-    virtual bool Initialize(BundleBlock const & bundle_block, std::unordered_map<size_t, size_t> const & camera_group_map);
+    virtual bool Initialize(BundleBlock const & bundle_block);
     void SaveCameraCluster(std::string const & save_path);
 
 protected:

@@ -436,24 +436,45 @@ private:
 class BundleBlock
 {
 public:
-    struct DCamera
+    struct DGroup
     {
-        DCamera() {}
-        DCamera(size_t i, Vec6 const & intri, Vec3 const & aa, Vec3 const & trans) :
-            id(i), intrinsic(intri), axis_angle(aa), translation(trans) {}
+        DGroup() {}
+        DGroup(size_t i, Vec6 const & intri) : id (i), intrinsic(intri) {}
+        DGroup(size_t i, Vec6 const & intri, int w, int h) : id (i), intrinsic(intri), width(w), height(h) {}
 
         void Print() const
         {
-            std::cout << "[Camera] " << id << "\n" << "intrinsic: " << intrinsic << "\n"
+            std::cout << "[Group] " << id << "\n" << "intrinsic: " << intrinsic << "\n";
+        }
+
+        size_t id;
+        Vec6 intrinsic; // focal, u0, v0, radial_distortion[3]
+        int width;
+        int height;
+    };
+
+    struct DCamera
+    {
+        DCamera() {}
+        DCamera(size_t i, size_t g_id, Vec3 const & aa, Vec3 const & trans) :
+            id(i), group_id(g_id), axis_angle(aa), translation(trans) {}
+        DCamera(size_t i, size_t g_id, Vec3 const & aa, Vec3 const & trans, std::string const & path) :
+            id(i), group_id(g_id), axis_angle(aa), translation(trans), image_path(path) {}
+
+
+        void Print() const
+        {
+            std::cout << "[Camera] " << id << "\n"
                       << "axis angle: " << axis_angle << "\n" << "translation: " << translation << "\n";
         }
 
         size_t id;
+        size_t group_id;
         std::unordered_set<size_t> linked_projections;
         std::unordered_set<size_t> linked_cameras;
         Vec3 axis_angle;
         Vec3 translation;
-        Vec6 intrinsic; // focal, u0, v0, radial_distortion[3]
+
         std::string image_path;
     };
     struct DTrack
@@ -492,10 +513,13 @@ public:
     };
 
 public:
+    std::vector<size_t> GroupIndexes() const;
     std::vector<size_t> CameraIndexes() const;
     std::vector<size_t> TrackIndexes() const;
     std::vector<size_t> ProjectionIndexes() const;
 
+    DGroup const & GetGroup(size_t id) const;
+    DGroup & GetGroup(size_t id);
     DCamera const & GetCamera(size_t id) const;
     DCamera & GetCamera(size_t id);
     DTrack const & GetTrack(size_t id) const;
@@ -507,9 +531,12 @@ public:
 
     bool LoadColmapTxt(std::string const & cameras_path, std::string const & images_path, std::string const & points_path);
 
+    void SaveColmapTxt(std::string const & cameras_path, std::string const & images_path, std::string const & points_path) const;
+
     void Print() const;
 
 private:
+    std::unordered_map<size_t, DGroup> groups_;
     std::unordered_map<size_t, DCamera> cameras_;
     std::unordered_map<size_t, DTrack> tracks_;
     std::unordered_map<size_t, DProjection> projections_;

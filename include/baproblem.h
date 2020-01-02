@@ -31,7 +31,7 @@ public:
 
 public:
     void Create(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num);
-    virtual bool Initialize(BundleBlock const & bundle_block, std::unordered_map<size_t, size_t> const & camera_group);
+    virtual bool Initialize(BundleBlock const & bundle_block);
 
     inline size_t PoseNum() const { return pose_block_.PoseNum(); }
     inline void GetPose(size_t idx, Vec3 & angle_axis, Vec3 & translation) const
@@ -85,6 +85,8 @@ public:
     }
 
     virtual void Solve() = 0;
+
+    void Update(BundleBlock & bundle_block) const;
 
 protected:
     size_t GetProjectionIndex(size_t pose_index, size_t point_index) const;
@@ -248,10 +250,11 @@ protected:
     std::unordered_map<size_t, std::unordered_map<size_t, size_t> > pose_projection_map_;               // <pose, <point, projection> >
     std::unordered_map<size_t, std::unordered_map<size_t, size_t> > point_projection_map_;              // <point, <pose, projection> >
     std::unordered_map<size_t, std::unordered_map<size_t, std::vector<size_t> > > common_point_map_;    // <pose, <pose, points> >
-    std::unordered_map<size_t, size_t> pose_group_map_;                                                 // <pose, group>
+    std::unordered_map<size_t, size_t> pose_group_map_;                                                         // <pose, group>
     std::unordered_map<size_t, std::vector<size_t> > group_pose_map_;                                   // <group, poses>
-    std::unordered_map<size_t, size_t> pose_index_map_;                                                 // <local pose id, origin id>
-    std::unordered_map<size_t, std::string> pose_path_map_;                                            // <local pose id, image path>
+    std::unordered_map<size_t, size_t> group_index_map_;                                                        // <local group id, origin id>
+    std::unordered_map<size_t, size_t> pose_index_map_;                                                          // <local pose id, origin id>
+    std::unordered_map<size_t, size_t> point_index_map_;                                                         // <local point id, origin id>
 
 protected:
     LossFunction * loss_function_;

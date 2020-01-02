@@ -992,10 +992,9 @@ bool StochasticBAProblem::StepAccept()
     return last_square_error_ > square_error_;
 }
 
-bool StochasticBAProblem::Initialize(BundleBlock const & bundle_block,
-                                            std::unordered_map<size_t, size_t> const & camera_group_map)
+bool StochasticBAProblem::Initialize(BundleBlock const & bundle_block)
 {
-    if (!BAProblem::Initialize(bundle_block, camera_group_map))
+    if (!BAProblem::Initialize(bundle_block))
         return false;
     InitializeCluster();
     return true;

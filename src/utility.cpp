@@ -3,10 +3,11 @@
 #include <vector>
 #include <cassert>
 #include <fstream>
+#include <iostream>
 
 Mat3 AngleAxis2Matrix(Vec3 const & angle_axis)
 {
-    double angle = std::max(angle_axis.norm(), EPSILON);
+    DT angle = std::max(angle_axis.norm(), EPSILON);
     Vec3 axis = angle_axis / angle;
     AxisAngle rotation(angle, axis);
     return rotation.toRotationMatrix();
@@ -14,16 +15,28 @@ Mat3 AngleAxis2Matrix(Vec3 const & angle_axis)
 
 Vec3 Quaternion2AngleAxis(Vec4 const & quaternion)
 {
-    double qw = quaternion[0];
-    double qx = quaternion[1];
-    double qy = quaternion[2];
-    double qz = quaternion[3];
-    double angle = 2 * acos(qw);
-    double sq = std::max(EPSILON, 1 - qw * qw);
-    double x = qx / sqrt(sq);
-    double y = qy / sqrt(sq);
-    double z = qz / sqrt(sq);
+    DT qw = quaternion[0];
+    DT qx = quaternion[1];
+    DT qy = quaternion[2];
+    DT qz = quaternion[3];
+    DT angle = 2 * acos(qw);
+    DT sq = std::max(EPSILON, 1 - qw * qw);
+    DT x = qx / std::sqrt(sq);
+    DT y = qy / std::sqrt(sq);
+    DT z = qz / std::sqrt(sq);
     return Vec3(angle * x, angle * y, angle * z);
+}
+
+Vec4 AngleAxis2Quaternion(Vec3 const & angle_axis)
+{
+    DT angle = angle_axis.norm();
+    DT sin_half_angle = std::sin(angle / 2);
+    Vec3 axis = angle_axis.normalized();
+    DT qw = std::cos(angle / 2);
+    DT qx = axis[0] * sin_half_angle;
+    DT qy = axis[1] * sin_half_angle;
+    DT qz = axis[2] * sin_half_angle;
+    return Vec4(qw, qx, qy, qz);
 }
 
 Vec3 RotatePoint(Vec3 const & angle_axis, Vec3 const & point)
@@ -327,27 +340,6 @@ double GaussianNoise(double mean, double stddev)
     return dist(generator);
 }
 
-bool ReadLinesFromFile(std::string const & file_path, std::vector<std::string> & lines)
-{
-    std::ifstream stream(file_path.c_str());
-
-    if (!stream.is_open())
-        return false;
-
-    std::string line;
-    while (stream.good())
-    {
-        std::getline(stream, line);
-        if (!line.empty())
-            lines.push_back(line);
-    }
-
-    if (!stream.eof())
-        return false;
-
-    return true;
-}
-
 bool ReadCameraGroup(std::string const & camera_group_file,
                      std::unordered_map<size_t, size_t> & camera_group_map)
 {
@@ -371,4 +363,35 @@ bool ReadCameraGroup(std::string const & camera_group_file,
         camera_group_map[camera_index] = group_index;
     }
     return true;
+}
+
+bool ReadLinesFromFile(std::string const & file_path, std::vector<std::string> & lines)
+{
+    std::ifstream stream(file_path.c_str());
+
+    if (!stream.is_open())
+        return false;
+
+    std::string line;
+    while (stream.good())
+    {
+        std::getline(stream, line);
+        if (!line.empty())
+            lines.push_back(line);
+    }
+
+    if (!stream.eof())
+        return false;
+
+    return true;
+}
+
+std::string JoinPath(std::string const & folder, std::string const & file)
+{
+    std::string temp_folder = folder;
+    if (!folder.empty() && folder[folder.size() - 1] != '/')
+    {
+        temp_folder += "/";
+    }
+    return temp_folder + file;
 }
