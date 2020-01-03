@@ -150,7 +150,7 @@ bool DLBAProblem::EvaluateDogLegStep()
         // is therefore the optimal solution to the trust-region problem.
         dl_step_ = gauss_newton_step_;
         dl_step_norm_ = gauss_newton_norm;
-        std::cout << "Gauss-Newton step size: " << gauss_newton_norm << ", radius: " << radius_ << "\n";
+//        std::cout << "Gauss-Newton step size: " << gauss_newton_norm << ", radius: " << radius_ << "\n";
     }
     else if (cauchy_norm >= radius_)
     {
@@ -159,7 +159,7 @@ bool DLBAProblem::EvaluateDogLegStep()
         // and return.
         dl_step_ = (radius_ / cauchy_norm) * cauchy_step_;
         dl_step_norm_ = radius_;
-        std::cout << "Cauchy step size: " << dl_step_.norm() << ", radius: " << radius_ << "\n";
+//        std::cout << "Cauchy step size: " << dl_step_.norm() << ", radius: " << radius_ << "\n";
     }
     else
     {
@@ -173,11 +173,11 @@ bool DLBAProblem::EvaluateDogLegStep()
         double a_minus_b_square = (gauss_newton_step_ - cauchy_step_).squaredNorm();
         double d = std::sqrt(c * c -  a_minus_b_square * (a_square - radius_ * radius_));
         double beta = (d - c) / a_minus_b_square;
-        std::cout << "[EvaluateDogLegStep] beta = " << beta << "\n";
+//        std::cout << "[EvaluateDogLegStep] beta = " << beta << "\n";
         dl_step_ = (1.0 - beta) * cauchy_step_ + beta * gauss_newton_step_;
         dl_step_norm_ = dl_step_.norm();
-        std::cout << "Dogleg step size: " << dl_step_.norm() << ", cauchy step size: " << cauchy_norm
-                  << ", Gauss-Newton step size: " << gauss_newton_norm << ", radius: " << radius_ << "\n";
+//        std::cout << "Dogleg step size: " << dl_step_.norm() << ", cauchy step size: " << cauchy_norm
+//                  << ", Gauss-Newton step size: " << gauss_newton_norm << ", radius: " << radius_ << "\n";
     }
     for (size_t i = 0; i < 6 * PoseNum(); i++)
     {

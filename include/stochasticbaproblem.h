@@ -12,6 +12,11 @@ public:
                         double radius,
                         LossType loss_type,
                         size_t max_community,
+                        size_t inner_step);
+    StochasticBAProblem(size_t max_iter,
+                        double radius,
+                        LossType loss_type,
+                        size_t max_community,
                         double temperature,
                         size_t batch_size,
                         size_t inner_step,

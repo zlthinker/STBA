@@ -248,7 +248,6 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
             std::istringstream image_stream(line);
             image_stream >> image_idx >> qw >> qx >> qy >> qz
                     >> tx >> ty >> tz >> camera_idx >> image_path;
-            std::cout << image_idx << "\t" << image_path << "\n";
 
             Vec3 angle_axis = Quaternion2AngleAxis(Vec4(qw, qx, qy, qz));
 

@@ -6,6 +6,20 @@ StochasticBAProblem::StochasticBAProblem() : LMBAProblem(), cluster_(NULL), batc
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(100);
+    cluster_->SetTemperature(10);
+    SetIntrinsicFixed(true);
+}
+
+StochasticBAProblem::StochasticBAProblem(size_t max_iter,
+                                         double radius,
+                                         LossType loss_type,
+                                         size_t max_community,
+                                         size_t inner_step)
+    :LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), batch_size_(1), inner_step_(inner_step), complementary_clustering_(true)
+{
+    cluster_ = new Louvain();
+    cluster_->SetMaxCommunity(max_community);
+    cluster_->SetTemperature(10);
     SetIntrinsicFixed(true);
 }
 
