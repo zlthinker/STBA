@@ -2,10 +2,13 @@
 #include "stochasticbaproblem.h"
 #include "lmbaproblem.h"
 #include "dlbaproblem.h"
+//#include "cxxopts.hpp"
 
 
 int main(int argc, char **argv)
 {
+//    cxxopts::Options options(argv[0], "Exemplar program of Stochastic Bundle Adjustment (STBA)");
+
     std::string cameras_path = argv[1];
     std::string images_path = argv[2];
     std::string points_path = argv[3];
@@ -17,13 +20,15 @@ int main(int argc, char **argv)
 
     BundleBlock bundle_block;
     bundle_block.LoadColmapTxt(cameras_path, images_path, points_path);
+    bundle_block.AddGaussianNoiseToTrack(0, 0.02);
+    bundle_block.AddGaussianNoiseToTrack(0, 0.02);
 
     std::cout << "Before LMBAProblem.\n";
-    LMBAProblem problem;
+    StochasticBAProblem problem;
     problem.SetIntrinsicFixed(true);
-    problem.SetMaxIteration(10);
+    problem.SetMaxIteration(30);
     std::cout << "Before initialize.\n";
-    problem.Initialize(bundle_block);
+    assert(problem.Initialize(bundle_block));
     std::cout << "Before solve.\n";
     problem.Solve();
 

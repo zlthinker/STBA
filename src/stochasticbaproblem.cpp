@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-StochasticBAProblem::StochasticBAProblem() : cluster_(NULL), batch_size_(1), inner_step_(0)
+StochasticBAProblem::StochasticBAProblem() : LMBAProblem(), cluster_(NULL), batch_size_(1), inner_step_(4), complementary_clustering_(true)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(100);
@@ -745,7 +745,7 @@ bool StochasticBAProblem::EvaluateDeltaPose()
         EvaluateFullb(full_b_);
     }
 
-    for (size_t i = 0; i < batch_size_; i++)
+    for (size_t b = 0; b < batch_size_; b++)
     {
         VecX local_dy = VecX::Zero(PoseNum() * 6);
 

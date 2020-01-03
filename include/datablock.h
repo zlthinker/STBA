@@ -535,6 +535,10 @@ public:
 
     void Print() const;
 
+    void AddGaussianNoiseToTrack(DT mean, DT sigma);
+
+    void AddGaussianNoiseToCameraTranslation(DT mean, DT sigma);
+
 private:
     std::unordered_map<size_t, DGroup> groups_;
     std::unordered_map<size_t, DCamera> cameras_;

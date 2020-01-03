@@ -163,7 +163,7 @@ void BundleBlock::GetCommonPoints(std::unordered_map<size_t, std::unordered_map<
 bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string const & images_path, std::string const & points_path)
 {
     // Read camera intrinsics
-    std::cout << "Load intrinsics.\n";
+    std::cout << "[LoadColmapTxt] Load intrinsics: " << cameras_path << "\n";
     {
         std::ifstream cameras_file_stream(cameras_path, std::ios::in);
         if (!cameras_file_stream)
@@ -222,7 +222,7 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
     }
 
     // Read camera extrinsics
-    std::cout << "Load extrinsics.\n";
+    std::cout << "[LoadColmapTxt] Load extrinsics: " << images_path << "\n";
     {
         std::ifstream images_file_stream(images_path, std::ios::in);
         if (!images_file_stream)
@@ -285,7 +285,7 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
     }
 
     // Read points
-    std::cout << "Load points.\n";
+    std::cout << "[LoadColmapTxt] Load points: " << points_path << "\n";
     {
         std::ifstream point_file_stream(points_path, std::ios::in);
         if (!point_file_stream)
@@ -422,4 +422,28 @@ void BundleBlock::Print() const
     std::cout << "[BundleBlock::Print] # cameras = " << cameras_.size() << "\n"
               << "# tracks = " << tracks_.size() << "\n"
               << "# projections = " << projections_.size() << "\n";
+}
+
+void BundleBlock::AddGaussianNoiseToTrack(DT mean, DT sigma)
+{
+    std::cout << "[BundleBlock::AddGaussianNoiseToTrack] mean = " << mean << ", sigma = " << sigma << "\n";
+    std::unordered_map<size_t, DTrack>::iterator it = tracks_.begin();
+    for (; it != tracks_.end(); it++)
+    {
+        DTrack & track = it->second;
+        for (size_t i = 0; i < 3; i++)
+            track.position[i] += GaussianNoise(mean, sigma);
+    }
+}
+
+void BundleBlock::AddGaussianNoiseToCameraTranslation(DT mean, DT sigma)
+{
+    std::cout << "[BundleBlock::AddGaussianNoiseToCameraTranslation] mean = " << mean << ", sigma = " << sigma << "\n";
+    std::unordered_map<size_t, DCamera>::iterator it = cameras_.begin();
+    for (; it != cameras_.end(); it++)
+    {
+        DCamera & camera = it->second;
+        for (size_t i = 0; i < 3; i++)
+            camera.translation[i] += GaussianNoise(mean, sigma);
+    }
 }

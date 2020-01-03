@@ -20,6 +20,7 @@ BAProblem::BAProblem() :
     Ec_Cinv_w_(NULL),
     Ei_Cinv_w_(NULL),
     loss_function_(NULL),
+    thread_num_(1),
     fix_intrinsic_(false),
     max_degree_(1000),
     linear_solver_type_(ADAPTIVE)
@@ -45,6 +46,7 @@ BAProblem::BAProblem(LossType loss_type) :
     Ec_Cinv_w_(NULL),
     Ei_Cinv_w_(NULL),
     loss_function_(NULL),
+    thread_num_(1),
     fix_intrinsic_(false),
     max_degree_(1000),
     linear_solver_type_(ADAPTIVE)
@@ -217,6 +219,8 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block)
                  << "max degree: " << max_degree_ << "\n";
     std::cout << local_stream.str();
     stream_ << local_stream.str();
+
+    return true;
 }
 
 void BAProblem::Update(BundleBlock & bundle_block) const
