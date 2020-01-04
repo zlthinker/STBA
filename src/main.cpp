@@ -126,6 +126,11 @@ int main(int argc, char **argv)
         {
             dl = true;
         }
+        else if (option == "--help" || option == "--h")
+        {
+            PrintHelp();
+            return 0;
+        }
         else
         {
             std::cout << "Invalid option: " << option << "\n";
