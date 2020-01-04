@@ -324,6 +324,7 @@ void DLBAProblem::Solve()
     stream_ << "[Solve] After: mean / median / max reprojection error = "
             << mean_error << " / " << median_error << " / " << max_error << "\n";
     stream_ << "[Setting] thread number = " << thread_num_<< "\n";
+    stream_ << "[Setting] Dogleg\n";
 }
 
 void DLBAProblem::GetPoseDiagonal()

@@ -88,6 +88,8 @@ public:
 
     void Update(BundleBlock & bundle_block) const;
 
+    void SaveReport(std::string const & report_path) const;
+
 protected:
     size_t GetProjectionIndex(size_t pose_index, size_t point_index) const;
     void GetCommonPoints(size_t, size_t, std::vector<size_t> &) const;  // TODO

@@ -134,8 +134,9 @@ void StochasticBAProblem::Solve()
             << "[Setting] temperature = " << cluster_->GetTemperature() << "\n"
             << "[Setting] batch size = " << batch_size_ << "\n"
             << "[Setting] inner step = " << inner_step_ << "\n"
-            << "[Solve] complementary clustering = " << complementary_clustering_ << "\n"
-            << "[Solve] thread number = " << thread_num_ << "\n";
+            << "[Setting] complementary clustering = " << complementary_clustering_ << "\n"
+            << "[Setting] thread number = " << thread_num_ << "\n"
+            << "[Setting] STBA\n";
 }
 
 size_t StochasticBAProblem::GetPoseCluster(size_t pose_index) const

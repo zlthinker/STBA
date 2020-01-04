@@ -173,6 +173,7 @@ int main(int argc, char **argv)
     {
         problem = new StochasticBAProblem(iteration, radius, loss_type, cluster, inner_step);
     }
+    problem->SetThreadNum(thread_num);
 
     if (!problem->Initialize(bundle_block))
     {
@@ -182,6 +183,7 @@ int main(int argc, char **argv)
     }
     problem->Solve();
     problem->Update(bundle_block);
+    problem->SaveReport(JoinPath(output_folder, "report.txt"));
     delete problem;
 
     bundle_block.SaveColmapTxt(JoinPath(output_folder, "cameras.txt"), JoinPath(output_folder, "images.txt"), JoinPath(output_folder, "points.txt"));

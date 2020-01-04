@@ -1,5 +1,6 @@
 #include "baproblem.h"
 
+#include <fstream>
 #include <Eigen/IterativeLinearSolvers>
 
 BAProblem::BAProblem() :
@@ -257,6 +258,13 @@ void BAProblem::Update(BundleBlock & bundle_block) const
         BundleBlock::DTrack & track = bundle_block.GetTrack(point_index);
         GetPoint(i, track.position);
     }
+}
+
+void BAProblem::SaveReport(std::string const & report_path) const
+{
+    std::ofstream fout(report_path);
+    fout << stream_.str();
+    fout.close();
 }
 
 void BAProblem::SetIntrinsic(size_t idx, size_t camera_index, Vec6 const & intrinsic)
