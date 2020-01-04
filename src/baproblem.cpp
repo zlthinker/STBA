@@ -78,41 +78,49 @@ BAProblem::~BAProblem()
     if (loss_function_ != NULL)                 delete loss_function_;
 }
 
-void BAProblem::Create(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num)
+bool BAProblem::Create(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num)
 {
-    DT memory = 0.0;
-    pose_block_.Create(pose_num);
-    intrinsic_block_.Create(group_num);
-    point_block_.Create(point_num);
-    projection_block_.Create(proj_num);
-    memory += pose_num * 12 + group_num * 12 + point_num * 6 + proj_num * 2;
+    DT memory = pose_num * 12 + group_num * 12 + point_num * 6 + proj_num * 2 +
+            proj_num * 2 + proj_num * 12 + proj_num * 6 + pose_num * 36 + point_num * 9 +
+            proj_num * 18 + pose_num * 6 + point_num * 3 + pose_num * 6 +
+            group_num * 6 + proj_num * 12 + group_num * 36 + pose_num * 36 + group_num * point_num * 18 + group_num * 6;
+    memory = memory * 4 / (1024 * 1024 * 1024);  // kB
+    std::cout << "[BAProblem::Create] A memory of " << memory << " GB is going to be allocated.\n";
+
+    if (!pose_block_.Create(pose_num))          return false;
+    if (!intrinsic_block_.Create(group_num))    return false;
+    if (!point_block_.Create(point_num))         return false;
+    if (!projection_block_.Create(proj_num))   return false;
 
     Delete();
-    residual_ = new DT[2 * proj_num];
-    pose_jacobian_ = new DT[2 * proj_num * 6];   // The i-th item stores the jacobian of i-th projection w.r.t corresponding camera
-    point_jacobian_ = new DT[2 * proj_num * 3];  // The i-th item stores the jacobian of i-th projection w.r.t corresponding point
-    pose_jacobian_square_ = new DT[pose_num * 6 * 6];
-    point_jacobian_square_ = new DT[point_num * 3 * 3];
-    pose_point_jacobian_product_ = new DT[proj_num * 6 * 3];
-    pose_gradient_ = new DT[pose_num * 6];
-    point_gradient_ = new DT[point_num * 3];
-    Ec_Cinv_w_ = new DT[pose_num * 6];
-    memory += proj_num * 2 + proj_num * 12 + proj_num * 6 + pose_num * 36 + point_num * 9 +
-            proj_num * 18 + pose_num * 6 + point_num * 3 + pose_num * 6;
-
-    if (!fix_intrinsic_)
+    try
     {
-        intrinsic_gradient_ = new DT[group_num * 6];
-        intrinsic_jacobian_ = new DT[2 * proj_num * 6];
-        intrinsic_jacobian_square_ = new DT[group_num * 6 * 6];
-        pose_intrinsic_jacobian_product_ = new DT[pose_num * 6 * 6];
-        intrinsic_point_jacobian_product_ = new DT[group_num * point_num * 6 * 3];
-        std::fill(intrinsic_point_jacobian_product_, intrinsic_point_jacobian_product_ + group_num * point_num * 6 * 3, 0.0);
-        Ei_Cinv_w_ = new DT[group_num * 6];
-        memory += group_num * 6 + proj_num * 12 + group_num * 36 + pose_num * 36 + group_num * point_num * 18 + group_num * 6;
+        residual_ = new DT[2 * proj_num];
+        pose_jacobian_ = new DT[2 * proj_num * 6];   // The i-th item stores the jacobian of i-th projection w.r.t corresponding camera
+        point_jacobian_ = new DT[2 * proj_num * 3];  // The i-th item stores the jacobian of i-th projection w.r.t corresponding point
+        pose_jacobian_square_ = new DT[pose_num * 6 * 6];
+        point_jacobian_square_ = new DT[point_num * 3 * 3];
+        pose_point_jacobian_product_ = new DT[proj_num * 6 * 3];
+        pose_gradient_ = new DT[pose_num * 6];
+        point_gradient_ = new DT[point_num * 3];
+        Ec_Cinv_w_ = new DT[pose_num * 6];
+        if (!fix_intrinsic_)
+        {
+            intrinsic_gradient_ = new DT[group_num * 6];
+            intrinsic_jacobian_ = new DT[2 * proj_num * 6];
+            intrinsic_jacobian_square_ = new DT[group_num * 6 * 6];
+            pose_intrinsic_jacobian_product_ = new DT[pose_num * 6 * 6];
+            intrinsic_point_jacobian_product_ = new DT[group_num * point_num * 6 * 3];
+            std::fill(intrinsic_point_jacobian_product_, intrinsic_point_jacobian_product_ + group_num * point_num * 6 * 3, 0.0);
+            Ei_Cinv_w_ = new DT[group_num * 6];
+        }
     }
-    memory = memory * 4 / (1024 * 1024 * 1024);  // kB
-    std::cout << "[Create] Allocate memory of " << memory << " GB.\n";
+    catch (std::bad_alloc & e)
+    {
+        std::cout << "[BAProblem::Create] Catching bad_alloc: " << e.what() << std::endl;
+        return false;
+    }
+    return true;
 }
 
 bool BAProblem::Initialize(BundleBlock const & bundle_block)
@@ -126,7 +134,7 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block)
     size_t point_num = point_indexes.size();
     size_t projection_num = projection_indexes.size();
 
-    Create(pose_num, group_num, point_num, projection_num);
+    if (!Create(pose_num, group_num, point_num, projection_num))    return false;
 
     std::unordered_map<size_t, size_t> group_map;
     for (size_t i = 0; i < group_indexes.size(); i++)

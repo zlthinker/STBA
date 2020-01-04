@@ -152,8 +152,8 @@ int main(int argc, char **argv)
 
     BundleBlock bundle_block;
     bundle_block.LoadColmapTxt(cameras_path, images_path, points_path);
-    bundle_block.AddGaussianNoiseToTrack(0, 0.02);
-    bundle_block.AddGaussianNoiseToTrack(0, 0.02);
+    bundle_block.AddGaussianNoiseToTrack(0, noise);
+    bundle_block.AddGaussianNoiseToTrack(0, noise);
 
     BAProblem * problem;
     if (lm)
@@ -169,7 +169,12 @@ int main(int argc, char **argv)
         problem = new StochasticBAProblem(iteration, radius, loss_type, cluster, inner_step);
     }
 
-    problem->Initialize(bundle_block);
+    if (!problem->Initialize(bundle_block))
+    {
+        std::cout << "Fail to initialize bundle problem.\n";
+        delete problem;
+        return -1;
+    }
     problem->Solve();
     problem->Update(bundle_block);
     delete problem;

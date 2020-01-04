@@ -30,7 +30,7 @@ public:
     virtual ~BAProblem();
 
 public:
-    void Create(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num);
+    bool Create(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num);
     virtual bool Initialize(BundleBlock const & bundle_block);
 
     inline size_t PoseNum() const { return pose_block_.PoseNum(); }

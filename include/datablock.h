@@ -27,16 +27,25 @@ public:
         if (temp_delta_poses_ != NULL)  delete [] temp_delta_poses_;
     }
 
-    void Create(size_t pose_num)
+    bool Create(size_t pose_num)
     {
         if (poses_ != NULL)         delete [] poses_;
         if (delta_poses_ != NULL)   delete [] delta_poses_;
         if (temp_delta_poses_ != NULL)  delete [] temp_delta_poses_;
-        poses_ = new DT[pose_num * 6];
-        delta_poses_ = new DT[pose_num * 6];
-        temp_delta_poses_ = new DT[pose_num * 6];
+        try
+        {
+            poses_ = new DT[pose_num * 6];
+            delta_poses_ = new DT[pose_num * 6];
+            temp_delta_poses_ = new DT[pose_num * 6];
+        }
+        catch (std::bad_alloc & e)
+        {
+            std::cout << "[PoseBlock::Create] Catching bad_alloc: " << e.what() << std::endl;
+            return false;
+        }
         std::fill(delta_poses_, delta_poses_ + pose_num * 6, 0.0);
         pose_num_ = pose_num;
+        return true;
     }
 
     inline size_t PoseNum() const { return pose_num_; }
@@ -162,15 +171,24 @@ public:
         if (colors_ != NULL) delete [] colors_;
     }
 
-    void Create(size_t point_num)
+    bool Create(size_t point_num)
     {
         if (points_ != NULL) delete [] points_;
         if (delta_points_ != NULL) delete [] delta_points_;
-        points_ = new DT[point_num * 3];
-        delta_points_ = new DT[point_num * 3];
+        try
+        {
+            points_ = new DT[point_num * 3];
+            delta_points_ = new DT[point_num * 3];
+        }
+        catch (std::bad_alloc & e)
+        {
+            std::cout << "[PointBlock::Create] Catching bad_alloc: " << e.what() << std::endl;
+            return false;
+        }
         std::fill(delta_points_, delta_points_ + point_num * 3, 0.0);
         colors_ = new DT[point_num * 3];
         point_num_ = point_num;
+        return true;
     }
     inline size_t PointNum() const { return point_num_; }
     inline void SetPoint(size_t idx, Vec3 const & pt)
@@ -253,14 +271,23 @@ public:
         if (intrinsics_ != NULL)             delete intrinsics_;
         if (delta_intrinsics_ != NULL)       delete delta_intrinsics_;
     }
-    void Create(size_t group_num)
+    bool Create(size_t group_num)
     {
         if (intrinsics_ != NULL)             delete intrinsics_;
         if (delta_intrinsics_ != NULL)       delete delta_intrinsics_;
-        intrinsics_ = new DT[group_num * 6];
-        delta_intrinsics_ = new DT[group_num * 6];
+        try
+        {
+            intrinsics_ = new DT[group_num * 6];
+            delta_intrinsics_ = new DT[group_num * 6];
+        }
+        catch (std::bad_alloc & e)
+        {
+            std::cout << "[IntrinsicBlock::Create] Catching bad_alloc: " << e.what() << std::endl;
+            return false;
+        }
         std::fill(delta_intrinsics_, delta_intrinsics_ + group_num * 6, 0.0);
         group_num_ = group_num;
+        return true;
     }
     inline size_t GroupNum() const { return group_num_; }
     inline void SetIntrinsic(size_t idx, Vec6 const & intr)
@@ -320,13 +347,22 @@ public:
         if (indexes_ != NULL) delete [] indexes_;
     }
 
-    void Create(size_t proj_num)
+    bool Create(size_t proj_num)
     {
         if (projections_ != NULL) delete [] projections_;
         if (indexes_ != NULL) delete [] indexes_;
-        projections_ = new DT[proj_num * 2];
-        indexes_ = new size_t[proj_num * 2];
+        try
+        {
+            projections_ = new DT[proj_num * 2];
+            indexes_ = new size_t[proj_num * 2];
+        }
+        catch (std::bad_alloc & e)
+        {
+            std::cout << "[ProjectionBlock::Create] Catching bad_alloc: " << e.what() << std::endl;
+            return false;
+        }
         projection_num_ = proj_num;
+        return true;
     }
     inline size_t ProjectionNum() const { return projection_num_; }
     inline void SetProjection(size_t idx, size_t camera_index, size_t point_index, Vec2 const & proj)

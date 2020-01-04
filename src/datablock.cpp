@@ -163,7 +163,7 @@ void BundleBlock::GetCommonPoints(std::unordered_map<size_t, std::unordered_map<
 bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string const & images_path, std::string const & points_path)
 {
     // Read camera intrinsics
-    std::cout << "[LoadColmapTxt] Load intrinsics: " << cameras_path << "\n";
+    std::cout << "[BundleBlock::LoadColmapTxt] Load intrinsics: " << cameras_path << "\n";
     {
         std::ifstream cameras_file_stream(cameras_path, std::ios::in);
         if (!cameras_file_stream)
@@ -222,7 +222,7 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
     }
 
     // Read camera extrinsics
-    std::cout << "[LoadColmapTxt] Load extrinsics: " << images_path << "\n";
+    std::cout << "[BundleBlock::LoadColmapTxt] Load extrinsics: " << images_path << "\n";
     {
         std::ifstream images_file_stream(images_path, std::ios::in);
         if (!images_file_stream)
@@ -284,7 +284,7 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
     }
 
     // Read points
-    std::cout << "[LoadColmapTxt] Load points: " << points_path << "\n";
+    std::cout << "[BundleBlock::LoadColmapTxt] Load points: " << points_path << "\n";
     {
         std::ifstream point_file_stream(points_path, std::ios::in);
         if (!point_file_stream)
@@ -418,7 +418,8 @@ void BundleBlock::SaveColmapTxt(std::string const & cameras_path, std::string co
 
 void BundleBlock::Print() const
 {
-    std::cout << "[BundleBlock::Print] # cameras = " << cameras_.size() << "\n"
+    std::cout << "[BundleBlock::Print] # groups = " << groups_.size() << "\n"
+              << "# cameras = " << cameras_.size() << "\n"
               << "# tracks = " << tracks_.size() << "\n"
               << "# projections = " << projections_.size() << "\n";
 }
