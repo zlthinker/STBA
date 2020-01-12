@@ -4,6 +4,18 @@ Stochastic Bundle Adjustment for Efficient and Scalable Structure from Motion
 ## About
 
 
+### Benchmark on [1DSfM dataset](http://www.cs.cornell.edu/projects/1dsfm/)
+![1DSfM](doc/1DSfM.jpg)
+
+
+### Benchmark on [KITTI dataset](http://www.cvlibs.net/datasets/kitti/eval_odometry.php)
+![KITTI](doc/KITTI.jpg)
+
+
+### Benchmark on Large-Scale dataset
+![largs_scale](doc/large_scale.jpg)
+
+
 
 
 
