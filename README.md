@@ -1,3 +1,6 @@
+*TOC
+{:toc}
+
 # STBA
 Stochastic Bundle Adjustment for Efficient and Scalable Structure from Motion
 
