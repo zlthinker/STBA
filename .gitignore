@@ -3,3 +3,4 @@
 *.tpp~
 *.h~
 CMakeLists.txt.user
+build/
