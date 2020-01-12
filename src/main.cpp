@@ -157,8 +157,11 @@ int main(int argc, char **argv)
 
     BundleBlock bundle_block;
     bundle_block.LoadColmapTxt(cameras_path, images_path, points_path);
-    bundle_block.AddGaussianNoiseToTrack(0, noise);
-    bundle_block.AddGaussianNoiseToTrack(0, noise);
+    if (noise > 0)
+    {
+        bundle_block.AddGaussianNoiseToTrack(0, noise);
+        bundle_block.AddGaussianNoiseToCameraTranslation(0, noise);
+    }
 
     BAProblem * problem;
     if (lm)
