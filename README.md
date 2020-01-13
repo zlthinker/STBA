@@ -1,5 +1,5 @@
 # STBA
-Stochastic Bundle Adjustment for Efficient and Scalable Structure from Motion
+This is a C++ implementation of "Stochastic Bundle Adjustment for Efficient and Scalable Structure from Motion".
 
 ## About
 
@@ -19,7 +19,7 @@ Stochastic Bundle Adjustment for Efficient and Scalable Structure from Motion
 
 
 
-## How to use
+## Usage
 
 ### Requirements
 
@@ -35,7 +35,7 @@ Stochastic Bundle Adjustment for Efficient and Scalable Structure from Motion
  make
  ```
 
-### Testing
+### Run
 
 * Download the sparse reconstruction results of the [COLMAP dataset](https://colmap.github.io/datasets.html) (e.g., Gerrard Hall)
 * Unzip the compressed file and three files can be found in the `sparse` folder: `cameras.txt`, `images.txt` and `points3D.txt`.
@@ -46,4 +46,6 @@ Stochastic Bundle Adjustment for Efficient and Scalable Structure from Motion
 
 
 
-## Changelog
+## Credit
+
+This implementation was developed by [Lei Zhou](https://zlthinker.github.io/). Feel free to contact Lei for any enquiry.
