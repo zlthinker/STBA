@@ -14,7 +14,7 @@ void PrintHelp()
               << "--loss <val> : Set loss type (0 - NULL, 1 - Huber, 2 - Cauchy), default val = 2 \n"
               << "--noise <val> : Set sigma of Gaussian noise, default val = 0.0 \n"
               << "--lm : Use Levenberg Marquardt \n"
-              << "--dl : Use Dog Leg \n";
+              << "--dl : Use DogLeg \n";
 }
 
 int main(int argc, char **argv)
