@@ -4,7 +4,7 @@
 #include <Eigen/IterativeLinearSolvers>
 
 BAProblem::BAProblem() :
-    pose_block_(), point_block_(), projection_block_(),
+    pose_block_(), point_block_(), intrinsic_block_(), projection_block_(),
     residual_(NULL),
     pose_jacobian_(NULL),
     point_jacobian_(NULL),
@@ -1483,9 +1483,12 @@ bool BAProblem::EvaluateEcEc(size_t pose_index1, size_t pose_index2, Mat6 & EcEc
         GetJcJp(pose_index1, point_index, Jc1Jp);
         GetJcJp(pose_index2, point_index, Jc2Jp);
         GetJpJp(point_index, JpJp);
-        Mat3 JpJp_inv = JpJp.inverse();
-        if (IsNumericalValid(JpJp_inv))
+        if (std::abs(Determinant(JpJp)) > EPSILON)
+        {
+            Mat3 JpJp_inv = JpJp.inverse();
             EcEc += Jc1Jp * JpJp_inv * Jc2Jp.transpose();
+            assert(IsNumericalValid(EcEc));
+        }
     }
     return true;
 }
@@ -1584,11 +1587,11 @@ void BAProblem::EvaluateEcEc(MatX & EcEc) const
             pose_indexes.push_back(pose_index);
             proj_indexes.push_back(proj_index);
         }
-        Mat3 JpJp, JpJp_inv;
+        Mat3 JpJp;
         GetJpJp(i, JpJp);
-        JpJp_inv = JpJp.inverse();
-        if (IsNumericalValid(JpJp_inv))
+        if (std::abs(Determinant(JpJp)) > EPSILON)
         {
+            Mat3 JpJp_inv = JpJp.inverse();
             for (size_t j = 0; j < pose_indexes.size(); j++)
             {
                 size_t pose_index1 = pose_indexes[j];
@@ -1666,9 +1669,12 @@ void BAProblem::EvaluateEcEi(size_t pose_index, size_t group_index, Mat6 & EcEi)
         Mat63 JcJp, JiJp;
         GetJcJp(pose_index, point_index, JcJp);
         GetJiJp(group_index, point_index, JiJp);
-        Mat3 JpJp_inv = JpJp.inverse();
-        if (IsNumericalValid(JpJp_inv))
+
+        if (std::abs(Determinant(JpJp)) > EPSILON)
+        {
+            Mat3 JpJp_inv = JpJp.inverse();
             EcEi += JcJp * JpJp_inv * JiJp.transpose();
+        }
     }
 }
 
@@ -1684,9 +1690,12 @@ void BAProblem::EvaluateEiEi(size_t group_index1, size_t group_index2, Mat6 & Ei
         Mat63 Ji1Jp, Ji2Jp;
         GetJiJp(group_index1, i, Ji1Jp);
         GetJiJp(group_index2, i, Ji2Jp);
-        Mat3 JpJp_inv = JpJp.inverse();
-        if (IsNumericalValid(JpJp_inv))
+
+        if (std::abs(Determinant(JpJp)) > EPSILON)
+        {
+            Mat3 JpJp_inv = JpJp.inverse();
             EiEi += Ji1Jp * JpJp_inv * Ji2Jp.transpose();
+        }
     }
 }
 
@@ -1758,9 +1767,10 @@ void BAProblem::EvaluateEcw(size_t pose_index, Vec6 & Ecw) const
         GetJcJp(proj_index, JcJp);
         GetJpJp(point_index, JpJp);
         GetJpe(point_index, Jpe);
-        Mat3 JpJp_inv = JpJp.inverse();
-        if (IsNumericalValid(JpJp_inv))
+
+        if (std::abs(Determinant(JpJp)) > EPSILON)
         {
+            Mat3 JpJp_inv = JpJp.inverse();
             Ecw += JcJp * JpJp_inv * (-Jpe);
         }
     }
@@ -1782,6 +1792,7 @@ void BAProblem::EvaluateEcw()
     }
 }
 
+// TODO: update for better memory usage
 void BAProblem::EvaluateEiw(size_t group_index, Vec6 & Eiw) const
 {
     Eiw = Vec6::Zero();
@@ -1794,10 +1805,12 @@ void BAProblem::EvaluateEiw(size_t group_index, Vec6 & Eiw) const
         GetJiJp(group_index, i, JiJp);
         GetJpJp(i, JpJp);
         GetJpe(i, Jpe);
-        Mat3 JpJp_inv = JpJp.inverse();
-        if (IsNumericalValid(JpJp_inv))
+
+        if (std::abs(Determinant(JpJp)) > EPSILON)
         {
+            Mat3 JpJp_inv = JpJp.inverse();
             Eiw += JiJp * JpJp_inv * (-Jpe);
+            assert(IsNumericalValid(Eiw));
         }
     }
 }
@@ -2060,11 +2073,16 @@ void BAProblem::EvaluateDeltaPoint(size_t point_index, Vec3 & dz)
     GetJpJp(point_index, JpJp);
     GetJpe(point_index, Jpe);
     EvaluateEDelta(point_index, Edy);
-    Mat3 JpJp_inv = JpJp.inverse();
-    if (IsNumericalValid(JpJp_inv))
+    if (std::abs(Determinant(JpJp)) > EPSILON)
+    {
+        Mat3 JpJp_inv = JpJp.inverse();
         dz = JpJp_inv * (-Jpe - Edy);
+        assert(IsNumericalValid(dz));
+    }
     else
+    {
         dz = Vec3::Zero();
+    }
 }
 
 void BAProblem::EvaluateDeltaPoint()
@@ -2325,6 +2343,36 @@ void BAProblem::SetPoseDiagonal(VecX const & diagonal)
         pose_jacobian_square_[6 * 6 * i + 21] = diagonal(6 * i + 3);
         pose_jacobian_square_[6 * 6 * i + 28] = diagonal(6 * i + 4);
         pose_jacobian_square_[6 * 6 * i + 35] = diagonal(6 * i + 5);
+    }
+}
+
+void BAProblem::GetIntrinsicDiagonal(VecX & diagonal) const
+{
+    size_t group_num = GroupNum();
+    diagonal.resize(6 * group_num);
+    for (size_t i = 0; i < group_num; i++)
+    {
+        diagonal(6 * i) = intrinsic_jacobian_square_[6 * 6 * i];
+        diagonal(6 * i + 1) = intrinsic_jacobian_square_[6 * 6 * i + 7];
+        diagonal(6 * i + 2) = intrinsic_jacobian_square_[6 * 6 * i + 14];
+        diagonal(6 * i + 3) = intrinsic_jacobian_square_[6 * 6 * i + 21];
+        diagonal(6 * i + 4) = intrinsic_jacobian_square_[6 * 6 * i + 28];
+        diagonal(6 * i + 5) = intrinsic_jacobian_square_[6 * 6 * i + 35];
+    }
+}
+
+void BAProblem::SetIntrinsicDiagonal(VecX const & diagonal)
+{
+    size_t group_num = GroupNum();
+    assert(group_num * 6 == diagonal.size() && "[SetIntrinsicDiagonal] Size disagrees");
+    for (size_t i = 0; i < group_num; i++)
+    {
+        intrinsic_jacobian_square_[6 * 6 * i] = diagonal(6 * i);
+        intrinsic_jacobian_square_[6 * 6 * i + 7] = diagonal(6 * i + 1);
+        intrinsic_jacobian_square_[6 * 6 * i + 14] = diagonal(6 * i + 2);
+        intrinsic_jacobian_square_[6 * 6 * i + 21] = diagonal(6 * i + 3);
+        intrinsic_jacobian_square_[6 * 6 * i + 28] = diagonal(6 * i + 4);
+        intrinsic_jacobian_square_[6 * 6 * i + 35] = diagonal(6 * i + 5);
     }
 }
 

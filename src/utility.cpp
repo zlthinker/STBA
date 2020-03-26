@@ -5,6 +5,15 @@
 #include <fstream>
 #include <iostream>
 
+DT Determinant(Mat3 const & M)
+{
+    double a = M(0, 0) * (M(1, 1) * M(2, 2) - M(1, 2) * M(2, 1));
+    double b = M(0, 1) * (M(1, 0) * M(2, 2) - M(1, 2) * M(2, 0));
+    double c = M(0, 2) * (M(1, 0) * M(2, 1) - M(1, 1) * M(2, 0));
+
+    return a - b + c;
+}
+
 Mat3 AngleAxis2Matrix(Vec3 const & angle_axis)
 {
     DT angle = std::max(angle_axis.norm(), EPSILON);

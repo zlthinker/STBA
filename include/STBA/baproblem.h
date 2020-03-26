@@ -232,6 +232,8 @@ protected:
     void SetDiagonal(VecX const & diagonal);
     void GetPoseDiagonal(VecX & diagonal) const;
     void SetPoseDiagonal(VecX const & diagonal);
+    void GetIntrinsicDiagonal(VecX & diagonal) const;
+    void SetIntrinsicDiagonal(VecX const & diagonal);
     void GetPointDiagonal(VecX & diagonal) const;
     void SetPointDiagonal(VecX const & diagonal);
     bool SolveLinearSystem(MatX const & A, VecX const & b, VecX & x) const;

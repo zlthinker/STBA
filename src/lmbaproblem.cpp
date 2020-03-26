@@ -4,26 +4,26 @@
 #include <iomanip>
 
 LMBAProblem::LMBAProblem() : BAProblem(),
-    max_iteration_(100), rho_(0.0), mu_(1e4), decrease_factor_(3.0)
+    max_iteration_(100), mu_(1e4), rho_(0.0), decrease_factor_(3.0)
 {
 
 }
 
 LMBAProblem::LMBAProblem(LossType loss_type) : BAProblem(loss_type),
-    max_iteration_(100), rho_(0.0), mu_(1e4), decrease_factor_(3.0)
+    max_iteration_(100), mu_(1e4), rho_(0.0), decrease_factor_(3.0)
 {
 
 }
 
 LMBAProblem::LMBAProblem(size_t max_iter, double radius, LossType loss_type) : BAProblem(loss_type),
-    max_iteration_(max_iter), rho_(0.0), mu_(radius), decrease_factor_(3.0)
+    max_iteration_(max_iter), mu_(radius), rho_(0.0), decrease_factor_(3.0)
 {
 
 }
 
 LMBAProblem::LMBAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num) :
     BAProblem(pose_num, group_num, point_num, proj_num),
-    max_iteration_(100), rho_(0.0), mu_(1e4), decrease_factor_(3.0)
+    max_iteration_(100), mu_(1e4), rho_(0.0), decrease_factor_(3.0)
 {
 
 }
@@ -46,23 +46,25 @@ void LMBAProblem::Solve()
     {
         if (evaluate_)
         {
-//            Evaluate();
             EvaluateResidual();
             EvaluateJacobian();
-            EvaluateJcJp();
+            // evaluate Hessian
             EvaluateJcJc();
-            EvaluateJpJp();
-            EvaluateJce();
-            EvaluateJpe();
-            EvaluateJiJi();
             EvaluateJcJi();
+            EvaluateJcJp();
+            EvaluateJiJi();
             EvaluateJiJp();
+            EvaluateJpJp();
+            // evaluate gradient
+            EvaluateJce();
             EvaluateJie();
+            EvaluateJpe();
             ClearUpdate();
         }
 
         // Augment diagonal
         AugmentPoseDiagonal();
+        AugmentIntrinsicDiagonal();
         AugmentPointDiagonal();
 
         EvaluateEcw();
@@ -96,6 +98,7 @@ void LMBAProblem::Solve()
         {
             Print();
             ResetPoseDiagonal();
+            ResetIntrinsicDiagonal();
             ResetPointDiagonal();
             evaluate_ = false;
             DecreaseRadius();
@@ -420,6 +423,18 @@ void LMBAProblem::AugmentPoseDiagonal()
 void LMBAProblem::ResetPoseDiagonal()
 {
      SetPoseDiagonal(pose_diagonal_);
+}
+
+void LMBAProblem::AugmentIntrinsicDiagonal()
+{
+    GetIntrinsicDiagonal(intrinsic_diagonal_);
+    VecX aug_intrinsic_diagonal = intrinsic_diagonal_ / mu_;
+    SetIntrinsicDiagonal(intrinsic_diagonal_ + aug_intrinsic_diagonal);
+}
+
+void LMBAProblem::ResetIntrinsicDiagonal()
+{
+     SetIntrinsicDiagonal(intrinsic_diagonal_);
 }
 
 void LMBAProblem::AugmentPointDiagonal()

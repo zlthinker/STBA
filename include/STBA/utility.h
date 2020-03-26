@@ -28,6 +28,7 @@ typedef Eigen::Matrix<DT, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatX;
 typedef Eigen::SparseMatrix<DT> SMat;
 typedef AngleAxis<DT> AxisAngle;
 
+DT Determinant(Mat3 const & M);
 Mat3 AngleAxis2Matrix(Vec3 const & angle_axis);
 Vec3 Quaternion2AngleAxis(Vec4 const & quaternion);
 Vec4 AngleAxis2Quaternion(Vec3 const & angle_axis);

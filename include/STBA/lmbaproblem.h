@@ -33,6 +33,8 @@ protected:
 
     void AugmentPoseDiagonal();
     void ResetPoseDiagonal();
+    void AugmentIntrinsicDiagonal();
+    void ResetIntrinsicDiagonal();
     virtual void AugmentPointDiagonal();
     virtual void ResetPointDiagonal();
 
@@ -45,6 +47,7 @@ protected:
     double last_square_error_;
     double square_error_;
     VecX pose_diagonal_;
+    VecX intrinsic_diagonal_;
     VecX point_diagonal_;
     bool evaluate_;
 };
