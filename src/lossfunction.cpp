@@ -1,4 +1,4 @@
-#include "lossfunction.h"
+#include "STBA/lossfunction.h"
 
 #include <iostream>
 

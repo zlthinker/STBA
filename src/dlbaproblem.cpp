@@ -1,4 +1,4 @@
-#include "dlbaproblem.h"
+#include "STBA/dlbaproblem.h"
 
 DLBAProblem::DLBAProblem() : min_mu_(1.0), max_mu_(1e8), mu_(1e8),
     evaluate_(true), radius_(1e4), max_iteration_(100)

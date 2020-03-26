@@ -12,8 +12,7 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -std=c++11")
 
-include_directories(include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 file(GLOB SOURCES "src/*.cpp")
 file(GLOB SUB_SOURCES "src/clustering/*.cpp")

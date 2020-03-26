@@ -1,5 +1,5 @@
-#include "clustering/louvain.h"
-#include "utility.h"
+#include "STBA/clustering/louvain.h"
+#include "STBA/utility.h"
 
 #include <queue>
 #include <chrono>

@@ -1,7 +1,7 @@
-#include "clustering/louvain.h"
-#include "stochasticbaproblem.h"
-#include "lmbaproblem.h"
-#include "dlbaproblem.h"
+#include "STBA/clustering/louvain.h"
+#include "STBA/stochasticbaproblem.h"
+#include "STBA/lmbaproblem.h"
+#include "STBA/dlbaproblem.h"
 
 void PrintHelp()
 {

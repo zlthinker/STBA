@@ -2,7 +2,7 @@
 #define LOUVAIN_H
 
 #include <unordered_map>
-#include "clustering/graph.h"
+#include "STBA/clustering/graph.h"
 
 class Louvain
 {

@@ -1,7 +1,7 @@
 #include <cassert>
 #include <iostream>
 
-#include "clustering/graph.h"
+#include "STBA/clustering/graph.h"
 
 Graph::Graph()
 {

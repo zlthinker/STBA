@@ -1,4 +1,4 @@
-#include "lmbaproblem.h"
+#include "STBA/lmbaproblem.h"
 
 #include <iostream>
 #include <iomanip>

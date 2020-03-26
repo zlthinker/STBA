@@ -37,18 +37,18 @@ This is a C++ implementation of "Stochastic Bundle Adjustment for Efficient and 
 
 ### Run
 
-* Download the sparse reconstruction results of the [COLMAP dataset](https://colmap.github.io/datasets.html) (e.g., Gerrard Hall)
+* Download the sparse reconstruction results of the [COLMAP dataset](https://colmap.github.io/datasets.html) (e.g., Gerrard Hall).
 * Unzip the compressed file and three files can be found in the `sparse` folder: `cameras.txt`, `images.txt` and `points3D.txt`.
 * ``` cd STBA/build ```
 * ``` ./STBA <path_to_cameras.txt> <path_to_imagess.txt>  <path_to_points3D.txt> <output_folder>```
-* Run ```./STBA --help``` to see more options
+* Run ```./STBA --help``` to see more options.
 	* `--iteration`: Set the maximum number of iterations.
 	* `--cluster`: A STBA option which sets the maximum cluster size for stochastic graph clustering.
 	* `--inner_step`: A STBA option which sets the number of iterative step corrections.
 	* `--thread_num`: Set thread number for OpenMP parallel computing.
 	* `--radius`: Set the initial radius of trust region for the trust region solvers.
 	* `--loss`: Set the type of robust loss function. Currently, `Huber` and `Cauchy` loss functions are supported.
-	* `--noise`: The magnitude/sigma of Gaussian noise which will be added to track positions and camera centers for testing the bundle adjustment algorithms.
+	* `--noise`: The magnitude/sigma of random Gaussian noise which will be added to track positions and camera centers for testing the bundle adjustment algorithms.
 	* `--lm`: Use Levenberg-Marquardt solver.
 	* `--dl`: Use DogLeg solver.
 

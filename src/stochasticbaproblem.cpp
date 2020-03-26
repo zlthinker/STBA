@@ -1,4 +1,4 @@
-#include "stochasticbaproblem.h"
+#include "STBA/stochasticbaproblem.h"
 
 #include <fstream>
 

@@ -1,7 +1,7 @@
 #ifndef _NETWORK_HEADER
 #define _NETWORK_HEADER
 
-#include "utility.h"
+#include "STBA/utility.h"
 #include <vector>
 
 struct EdgeData

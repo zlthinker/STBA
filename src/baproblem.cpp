@@ -1,4 +1,4 @@
-#include "baproblem.h"
+#include "STBA/baproblem.h"
 
 #include <fstream>
 #include <Eigen/IterativeLinearSolvers>
