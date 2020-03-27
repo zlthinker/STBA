@@ -2303,12 +2303,12 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
                     {
                         Mat6 Hii2 = Tip * Hip[pidx2].transpose();
                         A.block((pose_num + group_index) * 6, (pose_num + group_index2) * 6, 6, 6) -= Hii2;
-                        A.block((pose_num + group_index2) * 6, (pose_num + group_index) * 6, 6, 6) -= Hii2.transpose();
+                        if (group_index != group_index2)
+                            A.block((pose_num + group_index2) * 6, (pose_num + group_index) * 6, 6, 6) -= Hii2.transpose();
                     }
                     Mat6 Hci = Tcp * Hip[pidx2].transpose();
                     A.block(pose_index * 6, (pose_num + group_index2) * 6, 6, 6) -= Hci;
-                    if (group_index != group_index2)
-                        A.block((pose_num + group_index2) * 6, pose_index * 6, 6, 6) -= Hci.transpose();
+                    A.block((pose_num + group_index2) * 6, pose_index * 6, 6, 6) -= Hci.transpose();
                 }
             }
         }
