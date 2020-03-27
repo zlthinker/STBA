@@ -2324,12 +2324,13 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
     {
         intrinsic_block_.SetDeltaIntrinsic(i, delta_camera.segment((i + pose_num) * 6, 6));
     }
+    std::cout << "A:\n" << A.block(0, 0, 12, 12) << "\n";
+    std::cout << "intercept:\n" << intercept.segment(0, 12) << "\n";
 }
 
 void BAProblem::EvaluatePointNew()
 {
     size_t const track_num = PointNum();
-    size_t const pose_num = PoseNum();
 
     for (size_t tidx = 0; tidx < track_num; tidx++)
     {
