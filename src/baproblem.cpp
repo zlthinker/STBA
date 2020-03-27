@@ -2315,7 +2315,7 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
     }
 
     VecX delta_camera;
-    linear_solver_type_ = static_cast<LinearSolverType>(2);
+    linear_solver_type_ = static_cast<LinearSolverType>(1);
     if (!SolveLinearSystem(A, intercept, delta_camera))
         return false;
     for (size_t i = 0; i < pose_num; i++)
@@ -2326,8 +2326,9 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
     {
         intrinsic_block_.SetDeltaIntrinsic(i, delta_camera.segment((i + pose_num) * 6, 6));
     }
-    std::cout << "A:\n" << A.block(0, 0, 12, 12) << "\n";
-    std::cout << "intercept:\n" << intercept.segment(0, 12) << "\n";
+    std::cout << "A:\n" << A.block(12, 12, 12, 12) << "\n";
+    std::cout << "intercept:\n" << intercept.segment(12, 12) << "\n";
+    std::cout << "delta camera:\n" << delta_camera.segment(12, 12) << "\n";
 }
 
 void BAProblem::EvaluatePointNew()
