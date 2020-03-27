@@ -2294,7 +2294,8 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
                 {
                     Mat6 Hcc2 = Tcp * Hcp[pidx2].transpose();
                     A.block(pose_index * 6, pose_index2 * 6, 6, 6) -= Hcc2;
-                    A.block(pose_index2 * 6, pose_index * 6, 6, 6) -= Hcc2.transpose();
+                    if (pose_index != pose_index2)
+                        A.block(pose_index2 * 6, pose_index * 6, 6, 6) -= Hcc2.transpose();
                 }
                 if (!fix_intrinsic_ )
                 {
@@ -2306,14 +2307,15 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
                     }
                     Mat6 Hci = Tcp * Hip[pidx2].transpose();
                     A.block(pose_index * 6, (pose_num + group_index2) * 6, 6, 6) -= Hci;
-                    A.block((pose_num + group_index2) * 6, pose_index * 6, 6, 6) -= Hci.transpose();
+                    if (group_index != group_index2)
+                        A.block((pose_num + group_index2) * 6, pose_index * 6, 6, 6) -= Hci.transpose();
                 }
             }
         }
     }
 
     VecX delta_camera;
-    linear_solver_type_ = static_cast<LinearSolverType>(1);
+    linear_solver_type_ = static_cast<LinearSolverType>(2);
     if (!SolveLinearSystem(A, intercept, delta_camera))
         return false;
     for (size_t i = 0; i < pose_num; i++)
