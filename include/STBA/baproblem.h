@@ -211,6 +211,9 @@ protected:
     virtual void EvaluateDeltaPoint();
     void EvaluateIntrinsics(std::vector<size_t> const & pose_indexes);
 
+    bool EvaluateCameraNew(DT const lambda);
+    void EvaluatePointNew();
+
     void UpdateParam();
 
     void ClearUpdate();
@@ -259,19 +262,23 @@ protected:
     std::unordered_map<size_t, size_t> group_index_map_;                                                        // <local group id, origin id>
     std::unordered_map<size_t, size_t> pose_index_map_;                                                          // <local pose id, origin id>
     std::unordered_map<size_t, size_t> point_index_map_;                                                         // <local point id, origin id>
+    std::vector<std::pair<size_t, size_t> > GetProjectionsInTrack(size_t const track_id) const;
 
 protected:
     LossFunction * loss_function_;
     DT * residual_;                             // e - reprojection error
+    // Jacobian
     DT * pose_jacobian_;                        // Jc, 2x6
     DT * point_jacobian_;                       // Jp, 2x3
     DT * intrinsic_jacobian_;                   // Ji, 2x6
+    // Hessian
     DT * pose_jacobian_square_;                 // Jc^T Jc, 6x6
-    DT * point_jacobian_square_;                // Jp^T Jp, 3x3
     DT * intrinsic_jacobian_square_;            // Ji^T Ji, 6x6
-    DT * pose_point_jacobian_product_;          // Jc^T Jp, 6x3
+    DT * point_jacobian_square_;                // Jp^T Jp, 3x3
     DT * pose_intrinsic_jacobian_product_;      // Jc^T Ji, 6x6
+    DT * pose_point_jacobian_product_;          // Jc^T Jp, 6x3
     DT * intrinsic_point_jacobian_product_;     // Ji^T Jp, 6x3
+    // Gradient
     DT * pose_gradient_;                        // Jc^T e, 6x1
     DT * intrinsic_gradient_;                   // Ji^T e, 6x1
     DT * point_gradient_;                       // Jp^T e, 3x1
@@ -286,6 +293,20 @@ protected:
     size_t max_degree_;                         // Max degree of camera graph
     size_t thread_num_;
     LinearSolverType linear_solver_type_;
+
+protected:
+    void GetTp(size_t point_index, Vec3 & tp) const;
+    void SetTp(size_t point_index, Vec3 const & tp);
+    void GetTcp(size_t proj_index, Mat63 & Tcp) const;
+    void SetTcp(size_t proj_index, Mat63 const & Tcp);
+    void GetTip(size_t proj_index, Mat63 & Tip) const;
+    void SetTip(size_t proj_index, Mat63 const & Tip);
+
+
+protected:
+    DT * tp_;       // 3 * point_num
+    DT * Tcp_;      // 6 * 3 * projection_num
+    DT * Tip_;      // 6 * 3 * projection_num
 };
 
 #endif // BAPROBLEM_H

@@ -46,44 +46,44 @@ void LMBAProblem::Solve()
     {
         if (evaluate_)
         {
-            EvaluateResidual();
-            EvaluateJacobian();
-            // evaluate Hessian
-            EvaluateJcJc();
-            EvaluateJcJi();
-            EvaluateJcJp();
-            EvaluateJiJi();
-            EvaluateJiJp();
-            EvaluateJpJp();
-            // evaluate gradient
-            EvaluateJce();
-            EvaluateJie();
-            EvaluateJpe();
+//            EvaluateResidual();
+//            EvaluateJacobian();
+//            // evaluate Hessian
+//            EvaluateJcJc();
+//            EvaluateJcJi();
+//            EvaluateJcJp();
+//            EvaluateJiJi();
+//            EvaluateJiJp();
+//            EvaluateJpJp();
+//            // evaluate gradient
+//            EvaluateJce();
+//            EvaluateJie();
+//            EvaluateJpe();
             ClearUpdate();
         }
 
         // Augment diagonal
-        AugmentPoseDiagonal();
-        AugmentIntrinsicDiagonal();
-        AugmentPointDiagonal();
+//        AugmentPoseDiagonal();
+//        AugmentIntrinsicDiagonal();
+//        AugmentPointDiagonal();
 
-        EvaluateEcw();
-        EvaluateEiw();
+//        EvaluateEcw();
+//        EvaluateEiw();
 
         // Compute update step
-        if (!EvaluateDeltaCamera())
+        if (!EvaluateCameraNew(1 / mu_))
         {
             std::cout << "Fail in EvaluateDeltaCamera.\n";
             step_accept_ = false;
         }
         else
         {
-            EvaluateDeltaPoint();               // compute delta point
+            EvaluatePointNew();               // compute delta point
             square_error_ = EvaluateSquareError(true);
-            if (StopCriterionGradient() || StopCriterionUpdate()
-                    || StopCriterionRadius() || StopCriterionRelativeCostChange())
+            if (StopCriterionUpdate() || StopCriterionRadius() || StopCriterionRelativeCostChange())
                 break;
             step_accept_ = StepAccept();
+            step_accept_ = true;
         }
 
         if (step_accept_)                            // accept, descrease lambda
@@ -355,7 +355,7 @@ bool LMBAProblem::StopCriterionRelativeCostChange()
 void LMBAProblem::Print()
 {
     double delta_loss = last_square_error_ - square_error_;
-    double max_gradient = MaxGradient();
+    double max_gradient = 0.0;//MaxGradient();
     double step = Step();
     double mean_error, median_error, max_error;
     ReprojectionError(mean_error, median_error, max_error, true);

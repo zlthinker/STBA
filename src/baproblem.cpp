@@ -99,21 +99,26 @@ bool BAProblem::Create(size_t pose_num, size_t group_num, size_t point_num, size
         residual_ = new DT[2 * proj_num];
         pose_jacobian_ = new DT[2 * proj_num * 6];   // The i-th item stores the jacobian of i-th projection w.r.t corresponding camera
         point_jacobian_ = new DT[2 * proj_num * 3];  // The i-th item stores the jacobian of i-th projection w.r.t corresponding point
-        pose_jacobian_square_ = new DT[pose_num * 6 * 6];
-        point_jacobian_square_ = new DT[point_num * 3 * 3];
-        pose_point_jacobian_product_ = new DT[proj_num * 6 * 3];
-        pose_gradient_ = new DT[pose_num * 6];
-        point_gradient_ = new DT[point_num * 3];
-        Ec_Cinv_w_ = new DT[pose_num * 6];
+//        pose_jacobian_square_ = new DT[pose_num * 6 * 6];
+//        point_jacobian_square_ = new DT[point_num * 3 * 3];
+//        pose_point_jacobian_product_ = new DT[proj_num * 6 * 3];
+//        pose_gradient_ = new DT[pose_num * 6];
+//        point_gradient_ = new DT[point_num * 3];
+//        Ec_Cinv_w_ = new DT[pose_num * 6];
+
+        tp_ = new DT[point_num * 3];
+        Tcp_ = new DT[proj_num * 6 * 3];
         if (!fix_intrinsic_)
         {
-            intrinsic_gradient_ = new DT[group_num * 6];
+//            intrinsic_gradient_ = new DT[group_num * 6];
             intrinsic_jacobian_ = new DT[2 * proj_num * 6];
-            intrinsic_jacobian_square_ = new DT[group_num * 6 * 6];
-            pose_intrinsic_jacobian_product_ = new DT[pose_num * 6 * 6];
-            intrinsic_point_jacobian_product_ = new DT[group_num * point_num * 6 * 3];
-            std::fill(intrinsic_point_jacobian_product_, intrinsic_point_jacobian_product_ + group_num * point_num * 6 * 3, 0.0);
-            Ei_Cinv_w_ = new DT[group_num * 6];
+//            intrinsic_jacobian_square_ = new DT[group_num * 6 * 6];
+//            pose_intrinsic_jacobian_product_ = new DT[pose_num * 6 * 6];
+//            intrinsic_point_jacobian_product_ = new DT[group_num * point_num * 6 * 3];
+//            std::fill(intrinsic_point_jacobian_product_, intrinsic_point_jacobian_product_ + group_num * point_num * 6 * 3, 0.0);
+//            Ei_Cinv_w_ = new DT[group_num * 6];
+
+            Tip_ = new DT[proj_num * 6 * 3];
         }
     }
     catch (std::bad_alloc & e)
@@ -620,9 +625,6 @@ void BAProblem::GetJiJp(size_t group_index, size_t point_index, Mat63 & JiJp) co
     assert(point_index < PointNum() && "[GetJiJp] Point index out of range");
     DT * ptr = intrinsic_point_jacobian_product_ + (group_index * PointNum() + point_index) * 6 * 3;
     JiJp = Mat63(ptr);
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 3; j++)
-            JiJp(i, j) = ptr[i * 3 + j];
 }
 
 void BAProblem::SetJiJp(size_t group_index, size_t point_index, Mat63 const & JiJp)
@@ -878,6 +880,51 @@ size_t BAProblem::GetPoseGroup(size_t pose_index) const
     std::unordered_map<size_t, size_t>::const_iterator it = pose_group_map_.find(pose_index);
     assert(it != pose_group_map_.end() && "[GetPoseGroup] Pose index not found");
     return it->second;
+}
+
+void BAProblem::GetTp(size_t point_index, Vec3 & tp) const
+{
+    assert(point_index < PointNum() && "[GetTp] Point index out of range");
+    for (size_t i = 0; i < 3; i++)
+        tp(i) = tp_[point_index * 3 + i];
+}
+void BAProblem::SetTp(size_t point_index, Vec3 const & tp)
+{
+    assert(point_index < PointNum() && "[SetTp] Point index out of range");
+    for (size_t i = 0; i < 3; i++)
+        tp_[point_index * 3 + i] = tp(i);
+}
+
+void BAProblem::GetTcp(size_t proj_index, Mat63 & Tcp) const
+{
+    assert(proj_index < ProjectionNum() && "[GetTcp] Projection index out of range");
+    DT * ptr = Tcp_ + proj_index * 6 * 3;
+    Tcp = Mat63(ptr);
+}
+void BAProblem::SetTcp(size_t proj_index, Mat63 const & Tcp)
+{
+    assert(proj_index < ProjectionNum() && "[SetTcp] Projection index out of range");
+    DT * ptr = Tcp_ + proj_index * 6 * 3;
+
+    for (size_t i = 0; i < 6; i++)
+        for (size_t j = 0; j < 3; j++)
+            ptr[i * 3 + j] += Tcp(i, j);
+}
+
+void BAProblem::GetTip(size_t proj_index, Mat63 & Tip) const
+{
+    assert(proj_index < ProjectionNum() && "[GetTip] Projection index out of range");
+    DT * ptr = Tip_ + proj_index * 6 * 3;
+    Tip = Mat63(ptr);
+}
+void BAProblem::SetTip(size_t proj_index, Mat63 const & Tip)
+{
+    assert(proj_index < ProjectionNum() && "[SetTip] Projection index out of range");
+    DT * ptr = Tcp_ + proj_index * 6 * 3;
+
+    for (size_t i = 0; i < 6; i++)
+        for (size_t j = 0; j < 3; j++)
+            ptr[i * 3 + j] += Tip(i, j);
 }
 
 void BAProblem::EvaluateResidual()
@@ -2160,6 +2207,162 @@ void BAProblem::EvaluateIntrinsics(std::vector<size_t> const & pose_indexes)
     SolveLinearSystemDense(A, b, intrinsics);
 }
 
+bool BAProblem::EvaluateCameraNew(DT const lambda)
+{
+    EvaluateResidual();
+    EvaluateJacobian();
+
+    size_t const track_num = PointNum();
+    size_t const pose_num = PoseNum();
+    size_t const group_num = fix_intrinsic_ ? 0 : GroupNum();
+    MatX A = MatX::Zero(6 * (pose_num + group_num), 6 * (pose_num + group_num));
+    VecX intercept = VecX::Zero(6 * (pose_num + group_num));
+
+    for (size_t tidx = 0; tidx < track_num; tidx++)
+    {
+        size_t track_index = tidx;
+        Mat3 Hpp = Mat3::Zero();
+        Vec3 bp = Vec3::Zero();
+        std::vector<std::pair<size_t, size_t> > projection_pairs = GetProjectionsInTrack(tidx);
+        std::vector<Mat63> Hcp, Hip;
+        Hcp.reserve(projection_pairs.size());
+        Hip.reserve(projection_pairs.size());
+        std::cout << "Track " << track_index << ", # projections = " << projection_pairs.size() << "\n";
+        for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
+        {
+            size_t pose_index = projection_pairs[pidx].first;
+            size_t projection_index = projection_pairs[pidx].second;
+            Mat26 pose_jacobian;
+            Mat23 point_jacobian;
+            Vec2 residual;
+            GetPoseJacobian(projection_index, pose_jacobian);
+            GetPointJacobian(projection_index, point_jacobian);
+            GetResidual(projection_index, residual);
+            Hpp += point_jacobian.transpose() * point_jacobian;
+            bp += -point_jacobian.transpose() * residual;
+
+            Mat6 Hcc = pose_jacobian.transpose() * pose_jacobian;
+            for (size_t i = 0; i < 6; i++)  Hcc(i, i) += lambda * Hcc(i, i);
+            A.block(pose_index * 6, pose_index * 6, 6, 6) += Hcc;
+            intercept.segment(pose_index * 6, 6) += -pose_jacobian.transpose() * residual;
+            Hcp.push_back(pose_jacobian.transpose() * point_jacobian);
+
+            if (!fix_intrinsic_)
+            {
+                size_t group_index = GetPoseGroup(pose_index);
+                Mat26 intrinsic_jacobian;
+                GetIntrinsicJacobian(projection_index, intrinsic_jacobian);
+                Mat6 Hii = intrinsic_jacobian.transpose() * intrinsic_jacobian;
+                for (size_t i = 0; i < 6; i++)  Hii(i, i) += lambda * Hii(i, i);
+                A.block((pose_num + group_index) * 6, (pose_num + group_index) * 6, 6, 6) += Hii;
+                intercept.segment((pose_num + group_index) * 6, 6) += -intrinsic_jacobian.transpose() * residual;
+                Hip.push_back(intrinsic_jacobian.transpose() * point_jacobian);
+            }
+        }
+        // augment the diagonal of Hpp
+        for (size_t i = 0; i < 3; i++)
+            Hpp(i, i) += lambda * Hpp(i, i);
+        Mat3 Hpp_inv = Mat3::Zero();
+        if (std::abs(Determinant(Hpp)) > EPSILON)
+            Hpp_inv = Hpp.inverse();
+        Vec3 tp = Hpp_inv * bp;
+        SetTp(track_index, tp);
+
+        for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
+        {
+            size_t pose_index = projection_pairs[pidx].first;
+            size_t projection_index = projection_pairs[pidx].second;
+            size_t group_index = GetPoseGroup(pose_index);
+            intercept.segment(pose_index * 6, 6) -= Hcp[pidx] * tp;
+            Mat63 Tcp = Hcp[pidx] * Hpp_inv;
+            SetTcp(projection_index, Tcp);
+            Mat63 Tip;
+
+            if (!fix_intrinsic_)
+            {
+                size_t group_index = GetPoseGroup(pose_index);
+                intercept.segment((pose_num + group_index) * 6, 6) -= Hip[pidx] * tp;
+                Tip = Hip[pidx] * Hpp_inv;
+                SetTip(projection_index, Tip);
+            }
+
+            for (size_t pidx2 = 0; pidx2 < projection_pairs.size(); pidx2++)
+            {
+                size_t pose_index2 = projection_pairs[pidx2].first;
+                size_t group_index2 = GetPoseGroup(pose_index2);
+                if (pose_index <= pose_index2)
+                {
+                    Mat6 Hcc2 = Tcp * Hcp[pidx2].transpose();
+                    A.block(pose_index * 6, pose_index2 * 6, 6, 6) -= Hcc2;
+                    A.block(pose_index2 * 6, pose_index * 6, 6, 6) -= Hcc2.transpose();
+                }
+                if (!fix_intrinsic_ )
+                {
+                    if (group_index <= group_index2)
+                    {
+                        Mat6 Hii2 = Tip * Hip[pidx2].transpose();
+                        A.block((pose_num + group_index) * 6, (pose_num + group_index2) * 6, 6, 6) -= Hii2;
+                        A.block((pose_num + group_index2) * 6, (pose_num + group_index) * 6, 6, 6) -= Hii2.transpose();
+                    }
+                    Mat6 Hci = Tcp * Hip[pidx2].transpose();
+                    A.block(pose_index * 6, (pose_num + group_index2) * 6, 6, 6) -= Hci;
+                    A.block((pose_num + group_index2) * 6, pose_index * 6, 6, 6) -= Hci.transpose();
+                }
+            }
+        }
+    }
+
+    VecX delta_camera;
+    linear_solver_type_ = static_cast<LinearSolverType>(1);
+    if (!SolveLinearSystem(A, intercept, delta_camera))
+        return false;
+    for (size_t i = 0; i < pose_num; i++)
+    {
+        pose_block_.SetDeltaPose(i, delta_camera.segment(i * 6, 6));
+    }
+    for (size_t i = 0; i < group_num; i++)
+    {
+        intrinsic_block_.SetDeltaIntrinsic(i, delta_camera.segment((i + pose_num) * 6, 6));
+    }
+}
+
+void BAProblem::EvaluatePointNew()
+{
+    size_t const track_num = PointNum();
+    size_t const pose_num = PoseNum();
+
+    for (size_t tidx = 0; tidx < track_num; tidx++)
+    {
+        size_t track_index = tidx;
+        Vec3 tp;
+        GetTp(track_index, tp);
+
+        std::vector<std::pair<size_t, size_t> > projection_pairs = GetProjectionsInTrack(tidx);
+        for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
+        {
+            size_t pose_index = projection_pairs[pidx].first;
+            size_t projection_index = projection_pairs[pidx].second;
+
+            Vec6 delta_pose;
+            pose_block_.GetDeltaPose(pose_index, delta_pose);
+            Mat63 Tcp;
+            GetTcp(projection_index, Tcp);
+            tp -= Tcp.transpose() * delta_pose;
+
+            if (!fix_intrinsic_)
+            {
+                size_t group_index = GetPoseGroup(pose_index);
+                Vec6 delta_intrinsic;
+                intrinsic_block_.GetDeltaIntrinsic(group_index, delta_intrinsic);
+                Mat63 Tip;
+                GetTip(projection_index, Tip);
+                tp -= Tip.transpose() * delta_intrinsic;
+            }
+        }
+        point_block_.SetDeltaPoint(track_index, tp);
+    }
+}
+
 void BAProblem::UpdateParam()
 {
     pose_block_.UpdatePose();
@@ -2525,11 +2728,28 @@ bool BAProblem::SolveLinearSystemSparse(SMat const & A, VecX const & b, VecX & x
 
 bool BAProblem::SolveLinearSystemIterative(SMat const & A, VecX const & b, VecX & x) const
 {
-    ConjugateGradient<SparseMatrix<DT>, Lower|Upper> cg;
+    ConjugateGradient<SparseMatrix<DT>, Upper> cg;
     cg.setMaxIterations(500);
     cg.setTolerance(1e-6);
     x = cg.compute(A).solve(b);
     return IsNumericalValid(x);
+}
+
+std::vector<std::pair<size_t, size_t> > BAProblem::GetProjectionsInTrack(size_t const track_id) const
+{
+    std::vector<std::pair<size_t, size_t> > projection_pairs;
+    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it = point_projection_map_.find(track_id);
+    if (it != point_projection_map_.end())
+    {
+        std::unordered_map<size_t, size_t> const & projection_map = it->second;
+        projection_pairs.reserve(projection_map.size());
+        std::unordered_map<size_t, size_t>::const_iterator it2 = projection_map.begin();
+        for (; it2 != projection_map.end(); it2++)
+        {
+            projection_pairs.push_back(std::make_pair(it2->first, it2->second));
+        }
+    }
+    return std::move(projection_pairs);
 }
 
 

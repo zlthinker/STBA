@@ -20,6 +20,9 @@ void PrintHelp()
 
 int main(int argc, char **argv)
 {
+    TestLM();
+    return 0;
+
     if (argc < 5)
     {
         PrintHelp();
