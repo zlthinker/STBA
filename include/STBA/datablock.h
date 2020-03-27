@@ -517,6 +517,8 @@ public:
     {
         DTrack() {}
         DTrack(size_t i) : id(i) {}
+        DTrack(size_t i, Vec3 const & pos) :
+            id(i), position(pos) {}
         DTrack(size_t i, Vec3 const & pos, Vec3 const & c) :
             id(i), position(pos), color(c) {}
 
@@ -562,6 +564,24 @@ public:
     DTrack & GetTrack(size_t id);
     DProjection const & GetProjection(size_t id) const;
     DProjection & GetProjection(size_t id);
+
+    inline void InsertGroup(DGroup const & group)               { groups_[group.id] = group; }
+    inline void InsertCamera(DCamera const & camera)        { cameras_[camera.id] = camera; }
+    inline void InsertTrack(DTrack const & track)                   { tracks_[track.id] = track; }
+    inline void InsertProjection(DProjection const & projection)
+    {
+        projections_[projection.id] = projection;
+        if (cameras_.find(projection.camera_id) != cameras_.end())
+        {
+            DCamera & camera = cameras_[projection.camera_id];
+            camera.linked_projections.insert(projection.id);
+        }
+        if (tracks_.find(projection.track_id) != tracks_.end())
+        {
+            DTrack & track = tracks_[projection.track_id];
+            track.linked_projections.insert(projection.id);
+        }
+    }
 
     void GetCommonPoints(std::unordered_map<size_t, std::unordered_map<size_t, std::vector<size_t> > > & common_point_map) const;
 

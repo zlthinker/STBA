@@ -4,3 +4,5 @@
 *.h~
 CMakeLists.txt.user
 build/
+test/
+.gitignore

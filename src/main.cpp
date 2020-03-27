@@ -2,6 +2,7 @@
 #include "STBA/stochasticbaproblem.h"
 #include "STBA/lmbaproblem.h"
 #include "STBA/dlbaproblem.h"
+#include "STBA/test.h"
 
 void PrintHelp()
 {
