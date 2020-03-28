@@ -2306,7 +2306,9 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
                         if (group_index != group_index2)
                             A.block((pose_num + group_index2) * 6, (pose_num + group_index) * 6, 6, 6) -= Hii2.transpose();
                     }
+
                     Mat6 Hci = Tcp * Hip[pidx2].transpose();
+                    std::cout << "Pose vs. group: " << pose_index << ", " << group_index2 << ":\n" << Hci << "\n";
                     A.block(pose_index * 6, (pose_num + group_index2) * 6, 6, 6) -= Hci;
                     A.block((pose_num + group_index2) * 6, pose_index * 6, 6, 6) -= Hci.transpose();
                 }
@@ -2326,9 +2328,9 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
     {
         intrinsic_block_.SetDeltaIntrinsic(i, delta_camera.segment((i + pose_num) * 6, 6));
     }
-    std::cout << "A:\n" << A.block(12, 12, 12, 12) << "\n";
-    std::cout << "intercept:\n" << intercept.segment(12, 12) << "\n";
-    std::cout << "delta camera:\n" << delta_camera.segment(12, 12) << "\n";
+    std::cout << "A:\n" << A << "\n";
+    std::cout << "intercept:\n" << intercept << "\n";
+    std::cout << "delta camera:\n" << delta_camera << "\n";
 }
 
 void BAProblem::EvaluatePointNew()

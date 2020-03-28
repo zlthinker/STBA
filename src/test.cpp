@@ -14,8 +14,8 @@ void SynthesizeBundleBlock(BundleBlock & bundle_block)
     intrinsic << (focal+10), (u+5), (v+5), distortion[0], distortion[1], distortion[2];
     BundleBlock::DGroup group(group_id, intrinsic);
     bundle_block.InsertGroup(group);
-    const size_t camera_num = 3;
-    const size_t track_num = 10;
+    const size_t camera_num = 1;
+    const size_t track_num = 1;
 
     for (size_t i = 0; i < camera_num; i++)
     {
