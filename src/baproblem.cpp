@@ -2257,13 +2257,17 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
                 A.block((pose_num + group_index) * 6, (pose_num + group_index) * 6, 6, 6) += Hii;
                 intercept.segment((pose_num + group_index) * 6, 6) += -intrinsic_jacobian.transpose() * residual;
                 Hip.push_back(intrinsic_jacobian.transpose() * point_jacobian);
+
+                Mat6 Hci = pose_jacobian.transpose() * intrinsic_jacobian;
+                A.block(pose_index * 6, (pose_num + group_index) * 6, 6, 6) += Hci;
+                A.block((pose_num + group_index) * 6, pose_index * 6, 6, 6) += Hci.transpose();
             }
         }
         // augment the diagonal of Hpp
         for (size_t i = 0; i < 3; i++)
             Hpp(i, i) += lambda * Hpp(i, i);
         Mat3 Hpp_inv = Mat3::Zero();
-        if (std::abs(Determinant(Hpp)) > std::numeric_limits<DT>::min())
+        if (std::abs(Determinant(Hpp)) > EPSILON)
             Hpp_inv = Hpp.inverse();
         Vec3 tp = Hpp_inv * bp;
         SetTp(track_index, tp);
