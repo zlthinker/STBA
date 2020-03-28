@@ -31,7 +31,7 @@ void SynthesizeBundleBlock(BundleBlock & bundle_block)
         BundleBlock::DTrack track(i, point);
         bundle_block.InsertTrack(track);
 
-        for (size_t j = 0; j < 3; j++)
+        for (size_t j = 0; j < camera_num; j++)
         {
             BundleBlock::DCamera const & camera = bundle_block.GetCamera(j);
             Vec2 proj;

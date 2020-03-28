@@ -2263,10 +2263,14 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
         for (size_t i = 0; i < 3; i++)
             Hpp(i, i) += lambda * Hpp(i, i);
         Mat3 Hpp_inv = Mat3::Zero();
-        if (std::abs(Determinant(Hpp)) > EPSILON)
+        if (std::abs(Determinant(Hpp)) > std::numeric_limits<DT>::min())
             Hpp_inv = Hpp.inverse();
         Vec3 tp = Hpp_inv * bp;
         SetTp(track_index, tp);
+        std::cout << "Track " << track_index << "\n"
+                  << "determinat of Hpp: " << Determinant(Hpp) << "\n"
+                  << "Hpp: \n" << Hpp << "\n"
+                  << "Hpp_inv: \n" << Hpp_inv << "\n";
 
         for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
         {
@@ -2308,7 +2312,12 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
                     }
 
                     Mat6 Hci = Tcp * Hip[pidx2].transpose();
-                    std::cout << "Pose vs. group: " << pose_index << ", " << group_index2 << ":\n" << Hci << "\n";
+                    std::cout << "Pose vs. group: " << pose_index << ", " << group_index2 << ":\n"
+                              << "Hci:\n"<< Hci << "\n"
+                              << "Tcp:\n"<< Tcp << "\n"
+                              << "Hip:\n"<< Hip[pidx2] << "\n"
+                              << "Hpp_inv:\n"<< Hpp_inv << "\n"
+                              << "Hcp:\n"<< Hcp[pidx] << "\n";
                     A.block(pose_index * 6, (pose_num + group_index2) * 6, 6, 6) -= Hci;
                     A.block((pose_num + group_index2) * 6, pose_index * 6, 6, 6) -= Hci.transpose();
                 }
