@@ -11,7 +11,7 @@ void SynthesizeBundleBlock(BundleBlock & bundle_block)
     Vec3 aa = {0.0001, 0.0001, 0.0001};
     size_t group_id = 0;
     Vec6 intrinsic;
-    intrinsic << focal, u, v, distortion[0], distortion[1], distortion[2];
+    intrinsic << (focal+10), (u+5), (v+5), distortion[0], distortion[1], distortion[2];
     BundleBlock::DGroup group(group_id, intrinsic);
     bundle_block.InsertGroup(group);
     const size_t camera_num = 3;
@@ -36,8 +36,6 @@ void SynthesizeBundleBlock(BundleBlock & bundle_block)
             BundleBlock::DCamera const & camera = bundle_block.GetCamera(j);
             Vec2 proj;
             Project(focal, u, v, camera.axis_angle, camera.translation, point, distortion, proj);
-            proj[0] += 5.0;
-            proj[1] += 5.0;
             BundleBlock::DProjection projection(proj_id++, j, i, proj);
             bundle_block.InsertProjection(projection);
         }
