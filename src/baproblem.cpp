@@ -920,7 +920,7 @@ void BAProblem::GetTip(size_t proj_index, Mat63 & Tip) const
 void BAProblem::SetTip(size_t proj_index, Mat63 const & Tip)
 {
     assert(proj_index < ProjectionNum() && "[SetTip] Projection index out of range");
-    DT * ptr = Tcp_ + proj_index * 6 * 3;
+    DT * ptr = Tip_ + proj_index * 6 * 3;
 
     for (size_t i = 0; i < 6; i++)
         for (size_t j = 0; j < 3; j++)
@@ -2227,7 +2227,6 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
         std::vector<Mat63> Hcp, Hip;
         Hcp.reserve(projection_pairs.size());
         Hip.reserve(projection_pairs.size());
-        std::cout << "Track " << track_index << ", # projections = " << projection_pairs.size() << "\n";
         for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
         {
             size_t pose_index = projection_pairs[pidx].first;
@@ -2271,10 +2270,6 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
             Hpp_inv = Hpp.inverse();
         Vec3 tp = Hpp_inv * bp;
         SetTp(track_index, tp);
-        std::cout << "Track " << track_index << "\n"
-                  << "determinat of Hpp: " << Determinant(Hpp) << "\n"
-                  << "Hpp: \n" << Hpp << "\n"
-                  << "Hpp_inv: \n" << Hpp_inv << "\n";
 
         for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
         {
@@ -2316,12 +2311,6 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
                     }
 
                     Mat6 Hci = Tcp * Hip[pidx2].transpose();
-                    std::cout << "Pose vs. group: " << pose_index << ", " << group_index2 << ":\n"
-                              << "Hci:\n"<< Hci << "\n"
-                              << "Tcp:\n"<< Tcp << "\n"
-                              << "Hip:\n"<< Hip[pidx2] << "\n"
-                              << "Hpp_inv:\n"<< Hpp_inv << "\n"
-                              << "Hcp:\n"<< Hcp[pidx] << "\n";
                     A.block(pose_index * 6, (pose_num + group_index2) * 6, 6, 6) -= Hci;
                     A.block((pose_num + group_index2) * 6, pose_index * 6, 6, 6) -= Hci.transpose();
                 }
@@ -2341,9 +2330,6 @@ bool BAProblem::EvaluateCameraNew(DT const lambda)
     {
         intrinsic_block_.SetDeltaIntrinsic(i, delta_camera.segment((i + pose_num) * 6, 6));
     }
-    std::cout << "A:\n" << A << "\n";
-    std::cout << "intercept:\n" << intercept << "\n";
-    std::cout << "delta camera:\n" << delta_camera << "\n";
 }
 
 void BAProblem::EvaluatePointNew()
@@ -2357,6 +2343,9 @@ void BAProblem::EvaluatePointNew()
         GetTp(track_index, tp);
 
         std::vector<std::pair<size_t, size_t> > projection_pairs = GetProjectionsInTrack(tidx);
+        Vec3 dp_pose, dp_intrinsic;
+        dp_pose.setZero();
+        dp_intrinsic.setZero();
         for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
         {
             size_t pose_index = projection_pairs[pidx].first;
@@ -2367,6 +2356,7 @@ void BAProblem::EvaluatePointNew()
             Mat63 Tcp;
             GetTcp(projection_index, Tcp);
             tp -= Tcp.transpose() * delta_pose;
+            dp_pose += Tcp.transpose() * delta_pose;
 
             if (!fix_intrinsic_)
             {
@@ -2376,6 +2366,7 @@ void BAProblem::EvaluatePointNew()
                 Mat63 Tip;
                 GetTip(projection_index, Tip);
                 tp -= Tip.transpose() * delta_intrinsic;
+                dp_intrinsic += Tip.transpose() * delta_intrinsic;
             }
         }
         point_block_.SetDeltaPoint(track_index, tp);
