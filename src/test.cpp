@@ -58,7 +58,7 @@ void TestLM()
     BundleBlock bundle_block;
     SynthesizeBundleBlock(bundle_block);
 
-    LMBAProblem problem(1, 1e2, static_cast<LossType>(0));
+    LMBAProblem problem(10, 1e4, static_cast<LossType>(0));
     problem.Initialize(bundle_block);
     problem.Solve();
     problem.Update(bundle_block);

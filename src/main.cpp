@@ -168,18 +168,18 @@ int main(int argc, char **argv)
     }
 
     BAProblem * problem;
-    if (lm)
+//    if (lm)
     {
         problem = new LMBAProblem(iteration, radius, loss_type);
     }
-    else if (dl)
-    {
-        problem = new DLBAProblem(iteration, radius, loss_type);
-    }
-    else
-    {
-        problem = new StochasticBAProblem(iteration, radius, loss_type, cluster, inner_step);
-    }
+//    else if (dl)
+//    {
+//        problem = new DLBAProblem(iteration, radius, loss_type);
+//    }
+//    else
+//    {
+//        problem = new StochasticBAProblem(iteration, radius, loss_type, cluster, inner_step);
+//    }
     problem->SetThreadNum(thread_num);
 
     if (!problem->Initialize(bundle_block))

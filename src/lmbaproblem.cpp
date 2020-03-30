@@ -4,26 +4,26 @@
 #include <iomanip>
 
 LMBAProblem::LMBAProblem() : BAProblem(),
-    max_iteration_(100), mu_(1e4), rho_(0.0), decrease_factor_(3.0)
+    max_iteration_(100), mu_(1e4), decrease_factor_(3.0)
 {
 
 }
 
 LMBAProblem::LMBAProblem(LossType loss_type) : BAProblem(loss_type),
-    max_iteration_(100), mu_(1e4), rho_(0.0), decrease_factor_(3.0)
+    max_iteration_(100), mu_(1e4), decrease_factor_(3.0)
 {
 
 }
 
 LMBAProblem::LMBAProblem(size_t max_iter, double radius, LossType loss_type) : BAProblem(loss_type),
-    max_iteration_(max_iter), mu_(radius), rho_(0.0), decrease_factor_(3.0)
+    max_iteration_(max_iter), mu_(radius), decrease_factor_(3.0)
 {
 
 }
 
 LMBAProblem::LMBAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num) :
     BAProblem(pose_num, group_num, point_num, proj_num),
-    max_iteration_(100), mu_(1e4), rho_(0.0), decrease_factor_(3.0)
+    max_iteration_(100), mu_(1e4), decrease_factor_(3.0)
 {
 
 }
@@ -46,44 +46,25 @@ void LMBAProblem::Solve()
     {
         if (evaluate_)
         {
-//            EvaluateResidual();
-//            EvaluateJacobian();
-//            // evaluate Hessian
-//            EvaluateJcJc();
-//            EvaluateJcJi();
-//            EvaluateJcJp();
-//            EvaluateJiJi();
-//            EvaluateJiJp();
-//            EvaluateJpJp();
-//            // evaluate gradient
-//            EvaluateJce();
-//            EvaluateJie();
-//            EvaluateJpe();
+            EvaluateResidual();
+            EvaluateJacobian();
             ClearUpdate();
         }
 
-        // Augment diagonal
-//        AugmentPoseDiagonal();
-//        AugmentIntrinsicDiagonal();
-//        AugmentPointDiagonal();
-
-//        EvaluateEcw();
-//        EvaluateEiw();
-
         // Compute update step
-        if (!EvaluateCameraNew(1 / mu_))
+        if (!EvaluateCamera(1 / mu_))
         {
             std::cout << "Fail in EvaluateDeltaCamera.\n";
             step_accept_ = false;
         }
         else
         {
-            EvaluatePointNew();               // compute delta point
+            EvaluatePoint();               // compute delta point
             square_error_ = EvaluateSquareError(true);
-            if (StopCriterionUpdate() || StopCriterionRadius() || StopCriterionRelativeCostChange())
+            if (StopCriterionGradient() || StopCriterionUpdate() ||
+                    StopCriterionRadius() || StopCriterionRelativeCostChange())
                 break;
             step_accept_ = StepAccept();
-            step_accept_ = true;
         }
 
         if (step_accept_)                            // accept, descrease lambda
@@ -97,9 +78,6 @@ void LMBAProblem::Solve()
         else                                    // reject, increase lambda
         {
             Print();
-            ResetPoseDiagonal();
-            ResetIntrinsicDiagonal();
-            ResetPointDiagonal();
             evaluate_ = false;
             DecreaseRadius();
         }
@@ -118,138 +96,6 @@ void LMBAProblem::Solve()
     stream_ << "[Setting] Levenberg Marquardt\n";
 }
 
-
-/*!
-    EvaluateResidual();
-    EvaluateJacobian();
-    EvaluateJcJc();
-    EvaluateJpJp();
-    EvaluateJcJp();
-    EvaluateJce();
-    EvaluateJpe();
-    EvaluateJiJi();
-    EvaluateJcJi();
-    EvaluateJiJp();
-    EvaluateJie();
- */
-void LMBAProblem::Evaluate()
-{
-    ClearResidual();
-    ClearPoseJacobian();
-    ClearPointJacobian();
-    ClearIntrinsicJacobian();
-    ClearJcJp();
-    ClearJcJc();
-    ClearJpJp();
-    ClearJce();
-    ClearJpe();
-    if (!fix_intrinsic_)
-    {
-        ClearJcJi();
-        ClearJiJp();
-        ClearJie();
-        ClearJiJi();
-    }
-    size_t proj_num = projection_block_.ProjectionNum();
-
-#ifdef OPENMP
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < proj_num; i++)
-    {
-        size_t pose_index = projection_block_.PoseIndex(i);
-        size_t point_index = projection_block_.PointIndex(i);
-        size_t group_index = GetPoseGroup(pose_index);
-        Vec3 angle_axis, translation, point;
-        Vec6 intrinsic;
-        pose_block_.GetPose(pose_index, angle_axis, translation);
-        point_block_.GetPoint(point_index, point);
-        GetPoseIntrinsic(pose_index, intrinsic);
-
-        Vec2 projection, reprojection, reprojection_error;
-        projection_block_.GetProjection(i, projection);
-        if (!Project(intrinsic(0), intrinsic(1), intrinsic(2), angle_axis, translation, point, intrinsic.tail<3>(), reprojection))
-            continue;
-        reprojection_error = reprojection - projection;
-
-        // EvaluateResidual();
-        Vec2 residual = reprojection_error;
-        loss_function_->CorrectResiduals(residual);
-        SetResidual(i, residual);
-
-        // EvaluateJacobian();
-        Mat23 jacobian_rotation;
-        Mat23 jacobian_translation;
-        Mat23 jacobian_point;
-        Mat26 jacobian_intrinsic;
-        ProjectAndGradient(angle_axis, translation, point, intrinsic(0), intrinsic(1), intrinsic(2), intrinsic.tail<3>(),
-                           projection, jacobian_rotation, jacobian_translation, jacobian_point, jacobian_intrinsic);
-
-        loss_function_->CorrectJacobian<2, 3>(reprojection_error, jacobian_rotation);
-        loss_function_->CorrectJacobian<2, 3>(reprojection_error, jacobian_translation);
-        loss_function_->CorrectJacobian<2, 3>(reprojection_error, jacobian_point);
-        loss_function_->CorrectJacobian<2, 6>(reprojection_error, jacobian_intrinsic);
-        SetPoseJacobian(i, jacobian_rotation, jacobian_translation);
-        SetPointJacobian(i, jacobian_point);
-        if (!fix_intrinsic_)
-            SetIntrinsicJacobian(i, jacobian_intrinsic);
-
-        // EvaluateJcJp();
-        Mat26 Jc;
-        Jc << jacobian_rotation, jacobian_translation;
-        Mat63 JcJp = Jc.transpose() * jacobian_point;
-        SetJcJp(i, JcJp);
-
-        // EvaluateJcJc();
-        Mat6 JcJc = Jc.transpose() * Jc;
-
-        // EvaluateJpJp();
-        Mat3 JpJp = jacobian_point.transpose() * jacobian_point;
-
-        // EvaluateJce();
-        Vec6 Jce = Jc.transpose() * residual;
-
-        // EvaluateJpe();
-        Vec3 Jpe = jacobian_point.transpose() * residual;
-
-        Mat6 JiJi, JcJi;
-        Mat63 JiJp;
-        Vec6 Jie;
-        if (!fix_intrinsic_)
-        {
-            // EvaluateJiJi();
-            JiJi = jacobian_intrinsic.transpose() * jacobian_intrinsic;
-
-            // EvaluateJcJi();
-            JcJi = Jc.transpose() * jacobian_intrinsic;
-
-            // EvaluateJiJp();
-            JiJp = jacobian_intrinsic.transpose() * jacobian_point;
-
-            // EvaluateJie();
-            Jie = jacobian_intrinsic.transpose() * residual;
-        }
-
-        #pragma omp critical
-        {
-            IncreJcJc(pose_index, JcJc);
-            IncreJpJp(point_index, JpJp);
-            IncreJce(pose_index, Jce);
-            IncreJpe(point_index, Jpe);
-            if (!fix_intrinsic_)
-            {
-                IncreJiJi(group_index, JiJi);
-                IncreJcJi(pose_index, JcJi);
-                IncreJiJp(group_index, point_index, JiJp);
-                IncreJie(group_index, Jie);
-            }
-        }
-
-
-    }
-
-}
-
 /*!
  * @brief Decrease step radius (more conservative) when step rejected
  */
@@ -264,36 +110,9 @@ void LMBAProblem::DecreaseRadius()
  */
 void LMBAProblem::IncreaseRadius()
 {
-    double factor = 1/3.0; //std::max(1/3.0, 1 - std::pow((2 * rho_ - 1), 3));
+    double factor = 1/3.0;
     mu_ = std::min(1e32, mu_ / factor);
     decrease_factor_ = 3.0;
-}
-
-/*!
- * @brief Evaluate the step quality by computing the ratio of exact cost decrease w.r.t the expected decrease of the linear model.
- * @param aug_diagonal - The incremental quantity added to the diagonal of J^TJ
- */
-void LMBAProblem::EvaluateRho(VecX const & aug_diagonal)
-{
-    double last_error = EvaluateSquareError(false);
-    double error = EvaluateSquareError(true);
-    double change = last_error - error;
-
-    VecX delta_pose, delta_point;
-    GetPoseUpdate(delta_pose);
-    GetPointUpdate(delta_point);
-    VecX gradient_pose, gradient_point;
-    GetJce(gradient_pose);
-    GetJpe(gradient_point);
-    VecX delta(delta_pose.size() + delta_point.size());
-    VecX gradient(gradient_pose.size() + gradient_point.size());
-    delta << delta_pose, delta_point;
-    gradient << gradient_pose, gradient_point;
-    double delta_Je = delta.dot(gradient);                  // d^T J^Te
-    double delta_square = delta.dot(aug_diagonal.cwiseProduct(delta));  // d^T D d
-    double model_change = (delta_square - delta_Je) * 0.5;
-
-    rho_ = change / std::max(model_change, double(EPSILON));
 }
 
 /*!
@@ -355,7 +174,7 @@ bool LMBAProblem::StopCriterionRelativeCostChange()
 void LMBAProblem::Print()
 {
     double delta_loss = last_square_error_ - square_error_;
-    double max_gradient = 0.0;//MaxGradient();
+    double max_gradient = MaxGradient();
     double step = Step();
     double mean_error, median_error, max_error;
     ReprojectionError(mean_error, median_error, max_error, true);
@@ -377,7 +196,6 @@ void LMBAProblem::Print()
                  << std::setprecision(3) << std::fixed
                  << "me: " << std::setw(6) << median_error << ", "
                  << "ae: " << std::setw(6) << mean_error << ", "
-                 << "rho: " << std::setw(5) << rho_ << ", "
                  << std::setprecision(1) << std::fixed
                  << "t: " << std::setw(5) << duration << "\n";
     std::cout << local_stream.str();
@@ -397,56 +215,37 @@ double LMBAProblem::Step() const
 
 double LMBAProblem::MaxGradient() const
 {
-    VecX Jce, Jpe;
-    GetJce(Jce);
-    GetJpe(Jpe);
+    size_t proj_num = ProjectionNum();
     DT max_val = 0.0;
-    for (size_t i = 0; i < Jce.size(); i++)
-        max_val = std::max(max_val, std::abs(Jce(i)));
-    for (size_t i = 0; i < Jpe.size(); i++)
-        max_val = std::max(max_val, std::abs(Jpe(i)));
+    for (size_t i = 0; i < proj_num; i++)
+    {
+        Vec2 residual;
+        Mat26 pose_jacobian, intrinsic_jacobian;
+        Mat23 point_jacobian;
+        GetResidual(i, residual);
+        GetPoseJacobian(i, pose_jacobian);
+        GetIntrinsicJacobian(i, intrinsic_jacobian);
+        GetPointJacobian(i, point_jacobian);
+        Vec6 pose_gradient = pose_jacobian.transpose() * residual;
+        Vec6 intrinsic_gradient = intrinsic_jacobian.transpose() * residual;
+        Vec3 point_gradient = point_jacobian.transpose() * residual;
+        for (size_t j = 0; j < 6; j++)
+        {
+            max_val = std::max(std::abs(pose_gradient[j]), max_val);
+            max_val = std::max(std::abs(intrinsic_gradient[j]), max_val);
+        }
+        for (size_t j = 0; j < 3; j++)
+        {
+            max_val = std::max(std::abs(point_gradient[j]), max_val);
+        }
+    }
+
     return max_val;
 }
 
 bool LMBAProblem::StepAccept() const
 {
     return square_error_ < last_square_error_;
-}
-
-void LMBAProblem::AugmentPoseDiagonal()
-{
-    GetPoseDiagonal(pose_diagonal_);
-    VecX aug_pose_diagonal = pose_diagonal_ / mu_;
-    SetPoseDiagonal(pose_diagonal_ + aug_pose_diagonal);
-}
-
-void LMBAProblem::ResetPoseDiagonal()
-{
-     SetPoseDiagonal(pose_diagonal_);
-}
-
-void LMBAProblem::AugmentIntrinsicDiagonal()
-{
-    GetIntrinsicDiagonal(intrinsic_diagonal_);
-    VecX aug_intrinsic_diagonal = intrinsic_diagonal_ / mu_;
-    SetIntrinsicDiagonal(intrinsic_diagonal_ + aug_intrinsic_diagonal);
-}
-
-void LMBAProblem::ResetIntrinsicDiagonal()
-{
-     SetIntrinsicDiagonal(intrinsic_diagonal_);
-}
-
-void LMBAProblem::AugmentPointDiagonal()
-{
-    GetPointDiagonal(point_diagonal_);
-    VecX aug_point_diagonal = point_diagonal_ / mu_;
-    SetPointDiagonal(point_diagonal_ + aug_point_diagonal);
-}
-
-void LMBAProblem::ResetPointDiagonal()
-{
-    SetPointDiagonal(point_diagonal_);
 }
 
 

@@ -3,6 +3,6 @@
 *.tpp~
 *.h~
 CMakeLists.txt.user
-build/
+build*
 test/
 .gitignore

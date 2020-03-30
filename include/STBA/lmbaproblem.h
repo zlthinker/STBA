@@ -18,10 +18,8 @@ public:
     inline void SetMaxIteration(size_t iter) { max_iteration_ = iter; }
 
 protected:
-    void Evaluate();
     void DecreaseRadius();  // When step rejected
     void IncreaseRadius();  // When step accepted
-    void EvaluateRho(VecX const &);
     bool StopCriterionGradient();
     bool StopCriterionUpdate();
     bool StopCriterionRadius();
@@ -31,18 +29,10 @@ protected:
     double MaxGradient() const;
     bool StepAccept() const;
 
-    void AugmentPoseDiagonal();
-    void ResetPoseDiagonal();
-    void AugmentIntrinsicDiagonal();
-    void ResetIntrinsicDiagonal();
-    virtual void AugmentPointDiagonal();
-    virtual void ResetPointDiagonal();
-
 
 protected:
     size_t max_iteration_;
     double mu_;     // 1/lambda
-    double rho_;    // gain ratio
     double decrease_factor_;
     double last_square_error_;
     double square_error_;
