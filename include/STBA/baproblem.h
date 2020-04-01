@@ -11,8 +11,6 @@
 #include <ctime>
 #include <Eigen/SparseCholesky>
 
-#define OPENMP
-
 enum LinearSolverType
 {
     SPARSE = 0,
@@ -76,7 +74,7 @@ public:
     inline void SetThreadNum(size_t val)
     {
         thread_num_ = val;
-#ifdef OPENMP
+#ifdef _OPENMP
         omp_set_dynamic(0);     // Explicitly disable dynamic teams
         omp_set_num_threads(thread_num_);
 #endif
@@ -114,7 +112,7 @@ protected:
     double EvaluateSquareError(bool const) const;
 
     void EvaluateJacobian();
-    bool EvaluateCamera(DT const lambda);
+    virtual bool EvaluateCamera(DT const lambda);
     void EvaluatePoint();
 
     void UpdateParam();
@@ -143,7 +141,7 @@ protected:
     std::unordered_map<size_t, std::unordered_map<size_t, size_t> > point_projection_map_;              // <point, <pose, projection> >
     std::unordered_map<size_t, std::unordered_map<size_t, std::vector<size_t> > > common_point_map_;    // <pose, <pose, points> >
     std::unordered_map<size_t, size_t> pose_group_map_;                                                         // <pose, group>
-    std::unordered_map<size_t, std::vector<size_t> > group_pose_map_;                                   // <group, poses>
+    std::unordered_map<size_t, std::vector<size_t> > group_pose_map_;                                   // <group, pose ids in this group>
     std::unordered_map<size_t, size_t> group_index_map_;                                                        // <local group id, origin id>
     std::unordered_map<size_t, size_t> pose_index_map_;                                                          // <local pose id, origin id>
     std::unordered_map<size_t, size_t> point_index_map_;                                                         // <local point id, origin id>

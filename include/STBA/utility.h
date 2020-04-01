@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <unordered_map>
+#include <numeric>
 
 typedef double DT;
 #define EPSILON double(1e-12)
@@ -187,6 +188,15 @@ std::vector<size_t> SortIndexes(const std::vector<T> &v, bool increase = true)
 
     return idx;
 }
+
+template <typename DT, size_t N>
+Eigen::Matrix<DT, N, N, Eigen::RowMajor> InverseMat(Eigen::Matrix<DT, N, N, Eigen::RowMajor> const & mat)
+{
+    if (std::abs(Determinant(mat)) < EPSILON)
+        return Eigen::Matrix<DT, N, N, Eigen::RowMajor>::Zero();
+    return mat.inverse();
+}
+
 
 bool ReadCameraGroup(std::string const & camera_group_file,
                      std::unordered_map<size_t, size_t> & camera_group_map);

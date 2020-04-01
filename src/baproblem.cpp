@@ -5,36 +5,36 @@
 
 BAProblem::BAProblem() :
     pose_block_(), point_block_(), intrinsic_block_(), projection_block_(),
+    loss_function_(NULL),
     residual_(NULL),
     pose_jacobian_(NULL),
     point_jacobian_(NULL),
     intrinsic_jacobian_(NULL),
-    tp_(NULL),
-    Tcp_(NULL),
-    Tip_(NULL),
-    loss_function_(NULL),
-    thread_num_(1),
     fix_intrinsic_(false),
     max_degree_(1000),
-    linear_solver_type_(ADAPTIVE)
+    thread_num_(1),
+    linear_solver_type_(ADAPTIVE),
+    tp_(NULL),
+    Tcp_(NULL),
+    Tip_(NULL)
 {
     loss_function_ = new HuberLoss();
 }
 
 BAProblem::BAProblem(LossType loss_type) :
     pose_block_(), point_block_(), projection_block_(),
+    loss_function_(NULL),
     residual_(NULL),
     pose_jacobian_(NULL),
     point_jacobian_(NULL),
     intrinsic_jacobian_(NULL),
-    tp_(NULL),
-    Tcp_(NULL),
-    Tip_(NULL),
-    loss_function_(NULL),
-    thread_num_(1),
     fix_intrinsic_(false),
     max_degree_(1000),
-    linear_solver_type_(ADAPTIVE)
+    thread_num_(1),
+    linear_solver_type_(ADAPTIVE),
+    tp_(NULL),
+    Tcp_(NULL),
+    Tip_(NULL)
 {
     switch(loss_type)
     {
@@ -491,7 +491,7 @@ void BAProblem::SetTcp(size_t proj_index, Mat63 const & Tcp)
 
     for (size_t i = 0; i < 6; i++)
         for (size_t j = 0; j < 3; j++)
-            ptr[i * 3 + j] += Tcp(i, j);
+            ptr[i * 3 + j] = Tcp(i, j);
 }
 
 void BAProblem::GetTip(size_t proj_index, Mat63 & Tip) const
@@ -507,7 +507,7 @@ void BAProblem::SetTip(size_t proj_index, Mat63 const & Tip)
 
     for (size_t i = 0; i < 6; i++)
         for (size_t j = 0; j < 3; j++)
-            ptr[i * 3 + j] += Tip(i, j);
+            ptr[i * 3 + j] = Tip(i, j);
 }
 
 void BAProblem::EvaluateResidual()
@@ -515,9 +515,7 @@ void BAProblem::EvaluateResidual()
     ClearResidual();
     size_t proj_num = projection_block_.ProjectionNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < proj_num; i++)
     {
         size_t pose_index = projection_block_.PoseIndex(i);
@@ -586,10 +584,7 @@ void BAProblem::ReprojectionError(double & mean, double & median, double & max, 
     assert(proj_num > 0 && "[ReprojectionError] Empty projection");
     std::vector<double> errors(proj_num, 0.0);
 
-
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < proj_num; i++)
     {
         Vec2 projection;
@@ -645,9 +640,7 @@ double BAProblem::EvaluateSquareError(bool const update) const
     assert(proj_num > 0 && "[EvaluateSquareError] Empty projection");
     double error = 0;
 
-#ifdef OPENMP
 #pragma omp parallel for reduction(+:error)
-#endif
     for (size_t i = 0; i < proj_num; i++)
     {
         Vec2 projection;
@@ -695,9 +688,7 @@ void BAProblem::EvaluateJacobian()
     ClearPointJacobian();
     size_t proj_num = projection_block_.ProjectionNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t j = 0; j < proj_num; j++)
     {
         // Multiply a factor for robustfication
@@ -856,15 +847,17 @@ bool BAProblem::EvaluateCamera(DT const lambda)
     {
         intrinsic_block_.SetDeltaIntrinsic(i, delta_camera.segment((i + pose_num) * 6, 6));
     }
+//    std::cout << "A:\n" << A << "\n"
+//    << "intercept:\n" << intercept << "\n"
+//    << "delta camera:\n" << delta_camera << "\n";
+    return true;
 }
 
 void BAProblem::EvaluatePoint()
 {
     size_t const track_num = PointNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t tidx = 0; tidx < track_num; tidx++)
     {
         size_t track_index = tidx;
@@ -872,9 +865,6 @@ void BAProblem::EvaluatePoint()
         GetTp(track_index, tp);
 
         std::vector<std::pair<size_t, size_t> > projection_pairs = GetProjectionsInTrack(tidx);
-        Vec3 dp_pose, dp_intrinsic;
-        dp_pose.setZero();
-        dp_intrinsic.setZero();
         for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
         {
             size_t pose_index = projection_pairs[pidx].first;
@@ -885,7 +875,6 @@ void BAProblem::EvaluatePoint()
             Mat63 Tcp;
             GetTcp(projection_index, Tcp);
             tp -= Tcp.transpose() * delta_pose;
-            dp_pose += Tcp.transpose() * delta_pose;
 
             if (!fix_intrinsic_)
             {
@@ -895,7 +884,6 @@ void BAProblem::EvaluatePoint()
                 Mat63 Tip;
                 GetTip(projection_index, Tip);
                 tp -= Tip.transpose() * delta_intrinsic;
-                dp_intrinsic += Tip.transpose() * delta_intrinsic;
             }
         }
         point_block_.SetDeltaPoint(track_index, tp);

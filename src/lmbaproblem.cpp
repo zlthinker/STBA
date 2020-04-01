@@ -220,23 +220,30 @@ double LMBAProblem::MaxGradient() const
     for (size_t i = 0; i < proj_num; i++)
     {
         Vec2 residual;
-        Mat26 pose_jacobian, intrinsic_jacobian;
+        Mat26 pose_jacobian;
         Mat23 point_jacobian;
         GetResidual(i, residual);
         GetPoseJacobian(i, pose_jacobian);
-        GetIntrinsicJacobian(i, intrinsic_jacobian);
         GetPointJacobian(i, point_jacobian);
         Vec6 pose_gradient = pose_jacobian.transpose() * residual;
-        Vec6 intrinsic_gradient = intrinsic_jacobian.transpose() * residual;
         Vec3 point_gradient = point_jacobian.transpose() * residual;
         for (size_t j = 0; j < 6; j++)
         {
             max_val = std::max(std::abs(pose_gradient[j]), max_val);
-            max_val = std::max(std::abs(intrinsic_gradient[j]), max_val);
         }
         for (size_t j = 0; j < 3; j++)
         {
             max_val = std::max(std::abs(point_gradient[j]), max_val);
+        }
+        if (!fix_intrinsic_)
+        {
+            Mat26 intrinsic_jacobian;
+            GetIntrinsicJacobian(i, intrinsic_jacobian);
+            Vec6 intrinsic_gradient = intrinsic_jacobian.transpose() * residual;
+            for (size_t j = 0; j < 6; j++)
+            {
+                max_val = std::max(std::abs(intrinsic_gradient[j]), max_val);
+            }
         }
     }
 

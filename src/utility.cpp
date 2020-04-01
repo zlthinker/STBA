@@ -4,6 +4,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <random>
 
 DT Determinant(Mat3 const & M)
 {
@@ -339,6 +340,7 @@ double RandomNoise(double min, double max)
     double length = max - min;
     return min + length * std::rand() / double(RAND_MAX);
 }
+
 
 double GaussianNoise(double mean, double stddev)
 {

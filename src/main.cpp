@@ -20,9 +20,6 @@ void PrintHelp()
 
 int main(int argc, char **argv)
 {
-    TestLM();
-    return 0;
-
     if (argc < 5)
     {
         PrintHelp();
@@ -168,7 +165,7 @@ int main(int argc, char **argv)
     }
 
     BAProblem * problem;
-//    if (lm)
+    if (lm)
     {
         problem = new LMBAProblem(iteration, radius, loss_type);
     }
@@ -176,11 +173,12 @@ int main(int argc, char **argv)
 //    {
 //        problem = new DLBAProblem(iteration, radius, loss_type);
 //    }
-//    else
-//    {
-//        problem = new StochasticBAProblem(iteration, radius, loss_type, cluster, inner_step);
-//    }
+    else
+    {
+        problem = new StochasticBAProblem(iteration, radius, loss_type, cluster, inner_step);
+    }
     problem->SetThreadNum(thread_num);
+    problem->SetIntrinsicFixed(true);
 
     if (!problem->Initialize(bundle_block))
     {

@@ -1,5 +1,6 @@
 #include "STBA/test.h"
 #include "STBA/lmbaproblem.h"
+#include "STBA/stochasticbaproblem.h"
 
 
 void SynthesizeBundleBlock(BundleBlock & bundle_block)
@@ -11,11 +12,11 @@ void SynthesizeBundleBlock(BundleBlock & bundle_block)
     Vec3 aa = {0.0001, 0.0001, 0.0001};
     size_t group_id = 0;
     Vec6 intrinsic;
-    intrinsic << (focal+10), (u+5), (v+5), distortion[0], distortion[1], distortion[2];
+    intrinsic << focal, u, v, distortion[0], distortion[1], distortion[2];
     BundleBlock::DGroup group(group_id, intrinsic);
     bundle_block.InsertGroup(group);
-    const size_t camera_num = 3;
-    const size_t track_num = 10;
+    const size_t camera_num = 6;
+    const size_t track_num = 20;
 
     for (size_t i = 0; i < camera_num; i++)
     {
@@ -36,6 +37,8 @@ void SynthesizeBundleBlock(BundleBlock & bundle_block)
             BundleBlock::DCamera const & camera = bundle_block.GetCamera(j);
             Vec2 proj;
             Project(focal, u, v, camera.axis_angle, camera.translation, point, distortion, proj);
+            proj[0] += 5.0;
+            proj[1] += 5.0;
             BundleBlock::DProjection projection(proj_id++, j, i, proj);
             bundle_block.InsertProjection(projection);
         }
@@ -58,7 +61,37 @@ void TestLM()
     BundleBlock bundle_block;
     SynthesizeBundleBlock(bundle_block);
 
-    LMBAProblem problem(10, 1e4, static_cast<LossType>(0));
+    LMBAProblem problem(1, 1e4, static_cast<LossType>(0));
+    problem.SetIntrinsicFixed(true);
+    problem.Initialize(bundle_block);
+    problem.Solve();
+    problem.Update(bundle_block);
+
+    std::vector<size_t> group_indexes = bundle_block.GroupIndexes();
+    std::vector<size_t> camera_indexes = bundle_block.CameraIndexes();
+    std::vector<size_t> track_indexes = bundle_block.TrackIndexes();
+
+    for (size_t i = 0; i < group_indexes.size(); i++)
+    {
+        bundle_block.GetGroup(group_indexes[i]).Print();
+    }
+    for (size_t i = 0; i < camera_indexes.size(); i++)
+    {
+        bundle_block.GetCamera(camera_indexes[i]).Print();
+    }
+    for (size_t i = 0; i < track_indexes.size(); i++)
+    {
+        bundle_block.GetTrack(track_indexes[i]).Print();
+    }
+}
+
+void TestSTBA()
+{
+    BundleBlock bundle_block;
+    SynthesizeBundleBlock(bundle_block);
+
+    size_t max_cluster = 100;
+    StochasticBAProblem problem(1, 1e4, static_cast<LossType>(0), max_cluster, 4);
     problem.Initialize(bundle_block);
     problem.Solve();
     problem.Update(bundle_block);
