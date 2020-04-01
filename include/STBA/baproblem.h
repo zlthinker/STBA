@@ -11,8 +11,6 @@
 #include <ctime>
 #include <Eigen/SparseCholesky>
 
-#define OPENMP
-
 enum LinearSolverType
 {
     SPARSE = 0,
@@ -76,7 +74,7 @@ public:
     inline void SetThreadNum(size_t val)
     {
         thread_num_ = val;
-#ifdef OPENMP
+#ifdef _OPENMP
         omp_set_dynamic(0);     // Explicitly disable dynamic teams
         omp_set_num_threads(thread_num_);
 #endif

@@ -178,6 +178,7 @@ int main(int argc, char **argv)
         problem = new StochasticBAProblem(iteration, radius, loss_type, cluster, inner_step);
     }
     problem->SetThreadNum(thread_num);
+    problem->SetIntrinsicFixed(true);
 
     if (!problem->Initialize(bundle_block))
     {

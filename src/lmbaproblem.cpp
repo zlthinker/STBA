@@ -152,9 +152,7 @@ void LMBAProblem::Evaluate()
     }
     size_t proj_num = projection_block_.ProjectionNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < proj_num; i++)
     {
         size_t pose_index = projection_block_.PoseIndex(i);
@@ -427,6 +425,7 @@ void LMBAProblem::ResetPoseDiagonal()
 
 void LMBAProblem::AugmentIntrinsicDiagonal()
 {
+    if (fix_intrinsic_) return;
     GetIntrinsicDiagonal(intrinsic_diagonal_);
     VecX aug_intrinsic_diagonal = intrinsic_diagonal_ / mu_;
     SetIntrinsicDiagonal(intrinsic_diagonal_ + aug_intrinsic_diagonal);
@@ -434,7 +433,8 @@ void LMBAProblem::AugmentIntrinsicDiagonal()
 
 void LMBAProblem::ResetIntrinsicDiagonal()
 {
-     SetIntrinsicDiagonal(intrinsic_diagonal_);
+    if (fix_intrinsic_) return;
+    SetIntrinsicDiagonal(intrinsic_diagonal_);
 }
 
 void LMBAProblem::AugmentPointDiagonal()

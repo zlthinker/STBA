@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <unordered_map>
+#include <numeric>
 
 typedef double DT;
 #define EPSILON double(1e-12)

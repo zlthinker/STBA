@@ -278,8 +278,8 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
                 DTrack & track = tracks_[track_idx];
                 track.linked_projections.insert(projection_id);
                 projection_id++;
-                cameras_[image_idx] = camera;
             }
+            cameras_[image_idx] = camera;
         }
     }
 
