@@ -16,17 +16,10 @@ protected:
     bool EvaluateCauchyStep();
     bool EvaluateGaussNewtonStep();
     bool EvaluateDogLegStep();
-    bool EvaluateStep();
-    void EvaluateRho();
+    bool EvaluateStep();;
     bool StepAccept();
     virtual void Solve();
 
-    void GetPoseDiagonal();
-    void GetPointDiagonal();
-    void AugmentPoseDiagonal();
-    void ResetPoseDiagonal();
-    void AugmentPointDiagonal();
-    void ResetPointDiagonal();
     bool StopCriterionUpdate();
     bool StopCriterionRelativeCostChange();
     inline void SetRadius(double r) { radius_ = r; }

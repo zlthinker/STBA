@@ -46,7 +46,6 @@ void DLBAProblem::EvaluateGradientAndDiagonal()
         intrinsic_diagonal_ = VecX::Zero(group_num * 6);
     }
   
-#pragma omp parallel for
     for (size_t pidx = 0; pidx < proj_num; pidx++)
     {
         Vec2 residual;
@@ -109,6 +108,7 @@ void DLBAProblem::EvaluateGradientAndDiagonal()
 bool DLBAProblem::EvaluateCauchyStep()
 {
     double jg_norm_square = 0.0;
+#pragma omp parallel for reduction(+:jg_norm_square)
     for (size_t i = 0; i < ProjectionNum(); i++)
     {
         // Compute the product of jacobian and gradient.
@@ -189,6 +189,7 @@ bool DLBAProblem::EvaluateGaussNewtonStep()
 
     if (success)
     {
+        #pragma omp parallel for
         for (size_t i = 0; i < pose_num; i++)
         {
             Vec6 pose_update, pose_diagonal;
@@ -196,6 +197,7 @@ bool DLBAProblem::EvaluateGaussNewtonStep()
             pose_diagonal = pose_diagonal_.segment(6 * i, 6);
             gauss_newton_step_.segment(6 * i, 6) = pose_update.cwiseProduct(pose_diagonal);
         }
+        #pragma omp parallel for
         for (size_t i = 0; i < group_num; i++)
         {
             Vec6 intrinisc_update, intrinsic_diagonal;
@@ -203,6 +205,7 @@ bool DLBAProblem::EvaluateGaussNewtonStep()
             intrinsic_diagonal = intrinsic_diagonal_.segment(6 * i, 6);
             gauss_newton_step_.segment(6 * pose_num + 6 * i, 6) = intrinisc_update.cwiseProduct(intrinsic_diagonal);
         }
+        #pragma omp parallel for
         for (size_t i = 0; i < point_num; i++)
         {
             Vec3 point_update, point_diagonal;
@@ -309,43 +312,6 @@ bool DLBAProblem::EvaluateStep()
         point_block_.SetDeltaPoint(i, dz);
     }
     return true;
-}
-
-void DLBAProblem::EvaluateRho()
-{
-    const size_t pose_num = PoseNum();
-    const size_t group_num = fix_intrinsic_ ? 0 : GroupNum();
-    const size_t point_num = PointNum();
-    
-    VecX diagonal = VecX::Zero(pose_num * 6 + group_num * 6 + point_num * 3);
-    VecX delta(pose_num * 6 + group_num * 6 + point_num * 3);
-    VecX gradient(pose_num * 6 + group_num * 6 + point_num * 3);
-    
-    VecX delta_pose, delta_intrinsic, delta_point;
-    GetPoseUpdate(delta_pose);
-    GetIntrinsicUpdate(delta_intrinsic);
-    GetPointUpdate(delta_point);
-    
-    if (fix_intrinsic_)
-    {
-        diagonal << pose_diagonal_, point_diagonal_;
-        delta << delta_pose, delta_point;
-        gradient << pose_gradient_, point_gradient_;
-    }
-    else
-    {
-        diagonal << pose_diagonal_, intrinsic_diagonal_, point_diagonal_;
-        delta << delta_pose, delta_intrinsic, delta_point;
-        gradient << pose_gradient_, intrinsic_gradient_, point_gradient_;
-    }
-    VecX aug_diagonal = diagonal.array().square() / mu_;
-    double change = last_square_error_ - square_error_;
-    
-    double delta_Je = delta.dot(gradient);  // d^T J^Te
-    double delta_square = delta.dot(aug_diagonal.cwiseProduct(delta));  // d^T D d
-    double model_change = (delta_square - delta_Je) * 0.5;
-    rho_ = change / std::max(model_change, double(EPSILON));
-    std::cout << "rho = " << rho_ << "\n";
 }
 
 bool DLBAProblem::StepAccept()
