@@ -202,17 +202,6 @@ void LMBAProblem::Print()
     stream_ << local_stream.str();
 }
 
-double LMBAProblem::Step() const
-{
-    VecX poses, points, delta_pose, delta_point;
-    GetPose(poses);
-    GetPoint(points);
-    GetPoseUpdate(delta_pose);
-    GetPointUpdate(delta_point);
-    double relative_step = std::sqrt( (delta_pose.squaredNorm() + delta_point.squaredNorm()) / (poses.squaredNorm() + points.squaredNorm()) );
-    return relative_step;
-}
-
 double LMBAProblem::MaxGradient() const
 {
     size_t proj_num = ProjectionNum();

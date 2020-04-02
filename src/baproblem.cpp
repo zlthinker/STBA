@@ -422,6 +422,18 @@ void BAProblem::GetPose(VecX & poses) const
     }
 }
 
+void BAProblem::GetIntrinsic(VecX & intrinsics) const
+{
+    size_t group_num = GroupNum();
+    intrinsics.resize(group_num * 6);
+    for (size_t i = 0; i < group_num; i++)
+    {
+        Vec6 local_intrinsic;
+        intrinsic_block_.GetIntrinsic(i, local_intrinsic);
+        intrinsics.segment(6 * i, 6) = local_intrinsic;
+    }
+}
+
 void BAProblem::GetPoint(VecX & points) const
 {
     size_t point_num = PointNum();
@@ -442,6 +454,19 @@ void BAProblem::GetPoseUpdate(VecX & update) const
     {
         Vec6 local_update;
         pose_block_.GetDeltaPose(i, local_update);
+        update.segment(6 * i, 6) = local_update;
+    }
+}
+
+void BAProblem::GetIntrinsicUpdate(VecX & update) const
+{
+    if (fix_intrinsic_) return;
+    size_t group_num = GroupNum();
+    update.resize(group_num * 6);
+    for (size_t i = 0; i < group_num; i++)
+    {
+        Vec6 local_update;
+        intrinsic_block_.GetDeltaIntrinsic(i, local_update);
         update.segment(6 * i, 6) = local_update;
     }
 }
@@ -1063,6 +1088,27 @@ std::vector<std::pair<size_t, size_t> > BAProblem::GetProjectionsInTrack(size_t 
         }
     }
     return std::move(projection_pairs);
+}
+
+double BAProblem::Step() const
+{
+    VecX poses, points, delta_pose, delta_point;
+    GetPose(poses);
+    GetPoint(points);
+    GetPoseUpdate(delta_pose);
+    GetPointUpdate(delta_point);
+    double step_norm = delta_pose.squaredNorm() + delta_point.squaredNorm();
+    double param_norm = poses.squaredNorm() + points.squaredNorm();
+    if (!fix_intrinsic_)
+    {
+        VecX intrinsics, delta_intrinsics;
+        GetIntrinsic(intrinsics);
+        GetIntrinsicUpdate(delta_intrinsics);
+        step_norm += delta_intrinsics.squaredNorm();
+        param_norm += intrinsics.squaredNorm();
+    }
+    double relative_step = std::sqrt(step_norm / param_norm);
+    return relative_step;
 }
 
 

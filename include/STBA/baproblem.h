@@ -100,11 +100,13 @@ protected:
     void GetPointJacobian(size_t, Mat23 &) const;
     void SetPointJacobian(size_t, Mat23 const &);
     void GetPose(VecX &) const;
+    void GetIntrinsic(VecX & intrinsics) const;
     void GetPoint(VecX &) const;
     void GetPoseUpdate(VecX &) const;
+    void GetIntrinsicUpdate(VecX & update) const;
     void GetPointUpdate(VecX &) const;
     size_t GetPoseGroup(size_t) const;
-
+    double Step() const;
 
 protected:
     void EvaluateResidual();

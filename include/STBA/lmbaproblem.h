@@ -25,7 +25,6 @@ protected:
     bool StopCriterionRadius();
     bool StopCriterionRelativeCostChange();
     virtual void Print();
-    double Step() const;
     double MaxGradient() const;
     bool StepAccept() const;
 
