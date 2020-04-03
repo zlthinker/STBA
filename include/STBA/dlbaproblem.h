@@ -33,7 +33,6 @@ private:
     double max_mu_;
     double radius_;
     double alpha_;                          // factor of the cauchy step
-    double rho_;                             // step quality
     // gradient
     VecX pose_gradient_;
     VecX point_gradient_;
@@ -45,7 +44,7 @@ private:
     VecX pose_diagonal_;
     VecX point_diagonal_;
     VecX intrinsic_diagonal_;
-    
+    // steps
     VecX cauchy_step_;
     VecX gauss_newton_step_;
     VecX dl_step_;

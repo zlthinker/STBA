@@ -428,9 +428,8 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
     }
 
     linear_solver_type_ = static_cast<LinearSolverType>(1);
-#ifdef OPENMP
+
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < cluster_num; i++)
     {
         MatX const & A = A_mats[i];

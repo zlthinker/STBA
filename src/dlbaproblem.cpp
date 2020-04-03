@@ -425,7 +425,6 @@ void DLBAProblem::Print()
                  << "F1: " << std::setw(width) << square_error_ << ", "
                  << "radius: " << std::setw(width) << radius_ << ", "
                  << "mu: " << std::setw(width) << mu_ << ", "
-                 << "rho: " << std::setw(width) << rho_ << ", "
                  << std::setprecision(3) << std::fixed
                  << "me: " << std::setw(6) << median_error << ", "
                  << std::setprecision(1) << std::fixed

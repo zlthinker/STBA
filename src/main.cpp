@@ -30,6 +30,15 @@ int main(int argc, char **argv)
     std::string images_path = argv[2];
     std::string points_path = argv[3];
     std::string output_folder = argv[4];
+    if (cameras_path.compare(0, 2, "--") == 0 || 
+        images_path.compare(0, 2, "--") == 0 ||
+        points_path.compare(0, 2, "--") == 0 ||
+        output_folder.compare(0, 2, "--") == 0)
+    {
+        PrintHelp();
+        return -1;
+    }
+
     size_t iteration = 100;
     size_t cluster = 100;
     size_t inner_step = 4;
