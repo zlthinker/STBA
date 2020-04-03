@@ -6,7 +6,7 @@
 
 void PrintHelp()
 {
-    std::cout << "<exe> <cameras.txt> <images.txt> <points.txt> <output_folder>\n"
+    std::cout << "Usage: <exe> <cameras.txt> <images.txt> <points.txt> <output_folder>\n"
               << "--iteration <val> : Set maximum iteration, default val = 100 \n"
               << "--cluster <val> : Set maximum cluster size, default val = 100 \n"
               << "--inner_step <val> : Set number of correction steps, default val = 4 \n"
@@ -20,6 +20,7 @@ void PrintHelp()
 
 int main(int argc, char **argv)
 {
+    std::cout << "STBA version: " << STBA_VERSION << std::endl;
     if (argc < 5)
     {
         PrintHelp();

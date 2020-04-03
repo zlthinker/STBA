@@ -21,5 +21,5 @@ file(GLOB SOURCES "src/*.cpp")
 file(GLOB SUB_SOURCES "src/clustering/*.cpp")
 set(SOURCES ${SOURCES} ${SUB_SOURCES})
 
-
 add_executable(STBA ${SOURCES})
+target_compile_definitions(STBA PUBLIC STBA_VERSION="1.0.0")
