@@ -429,14 +429,15 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
 
     linear_solver_type_ = static_cast<LinearSolverType>(1);
 
-#pragma omp parallel for
+    size_t sum_broken = 0;
+#pragma omp parallel for reduction(+:sum_broken)
     for (size_t i = 0; i < cluster_num; i++)
     {
         MatX const & A = A_mats[i];
         VecX const & intercept = intercept_vecs[i];
         VecX delta_camera;
         if (!SolveLinearSystem(A, intercept, delta_camera))
-            return false;
+            sum_broken++;
         std::vector<size_t> const & indexes = clusters[i];
         size_t pose_num = indexes.size();
         for (size_t j = 0; j < pose_num; j++)
@@ -445,5 +446,7 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
             pose_block_.SetDeltaPose(pose_index, delta_camera.segment(j * 6, 6));
         }
     }
+    if (sum_broken != 0)
+        return false;
     return true;
 }

@@ -146,12 +146,12 @@ bool DLBAProblem::EvaluateCauchyStep()
     if (fix_intrinsic_)
     {
         cauchy_step_.resize(PoseNum() * 6 + PointNum() * 3);
-        cauchy_step_ << (-alpha_ * pose_gradient_), (-alpha_ * point_gradient_);
+        cauchy_step_ << (-alpha_ * scaled_pose_gradient_), (-alpha_ * scaled_point_gradient_);
     }
     else
     {
         cauchy_step_.resize(PoseNum() * 6 + GroupNum() * 6 + PointNum() * 3);
-        cauchy_step_ << (-alpha_ * pose_gradient_), (-alpha_ * intrinsic_gradient_), (-alpha_ * point_gradient_);
+        cauchy_step_ << (-alpha_ * scaled_pose_gradient_), (-alpha_ * scaled_intrinsic_gradient_), (-alpha_ * scaled_point_gradient_);
     }
     return IsNumericalValid(cauchy_step_);
 }
@@ -236,7 +236,7 @@ bool DLBAProblem::EvaluateDogLegStep()
         // is therefore the optimal solution to the trust-region problem.
         dl_step_ = gauss_newton_step_;
         dl_step_norm_ = gauss_newton_norm;
-//        std::cout << "Gauss-Newton step size: " << gauss_newton_norm << ", radius: " << radius_ << "\n";
+       std::cout << "Gauss-Newton step size: " << gauss_newton_norm << ", radius: " << radius_ << "\n";
     }
     else if (cauchy_norm >= radius_)
     {
@@ -245,7 +245,7 @@ bool DLBAProblem::EvaluateDogLegStep()
         // and return.
         dl_step_ = (radius_ / cauchy_norm) * cauchy_step_;
         dl_step_norm_ = radius_;
-//        std::cout << "Cauchy step size: " << cauchy_norm << ", radius: " << radius_ << "\n";
+    //    std::cout << "Cauchy step size: " << cauchy_norm << ", radius: " << radius_ << "\n";
     }
     else
     {
@@ -261,7 +261,7 @@ bool DLBAProblem::EvaluateDogLegStep()
         double beta = (d - c) / a_minus_b_square;
         dl_step_ = (1.0 - beta) * cauchy_step_ + beta * gauss_newton_step_;
         dl_step_norm_ = dl_step_.norm();
-//        std::cout << "Dogleg step size: " << dl_step_.norm() << ", cauchy step size: " << cauchy_norm << ", Gauss-Newton step size: " << gauss_newton_norm << ", radius: " << radius_ << "\n";
+    //    std::cout << "Dogleg step size: " << dl_step_.norm() << ", cauchy step size: " << cauchy_norm << ", Gauss-Newton step size: " << gauss_newton_norm << ", radius: " << radius_ << "\n";
     }
     
     // Since the Cauchy step and the Gauss-Newton steps computed before have been rescaled by the root of hessian diagonal, we remove the rescaling here.
