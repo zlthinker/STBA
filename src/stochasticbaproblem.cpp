@@ -379,23 +379,23 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
         // augment the diagonal of Hpp
         for (size_t i = 0; i < 3; i++)
             Hpp(i, i) += lambda * Hpp(i, i);
-        Mat3 Hpp_inv = InverseMat<DT, 3>(Hpp);
+        Mat3 Hpp_inv = InverseMat(Hpp);
         Vec3 tp = Hpp_inv * bp;
         SetTp(track_index, tp);
 
         // augment the diagonal of Hpp_map
         std::unordered_map<size_t, Mat3> Hpp_map_inv;
-        std::unordered_map<size_t, Mat3>::const_iterator it = Hpp_map.begin();
+        std::unordered_map<size_t, Mat3>::iterator it = Hpp_map.begin();
         for (; it != Hpp_map.end(); it++)
         {
             size_t cluster_index = it->first;
-            Mat3 Hpp_c = it->second;
+            Mat3 & Hpp_c = it->second;
             for (size_t i = 0; i < 3; i++)
                 Hpp_c(i, i) += lambda * Hpp_c(i, i);
-            Hpp_map_inv.insert(std::make_pair(cluster_index, InverseMat<DT, 3>(Hpp_c)));
+            Hpp_map_inv.insert(std::make_pair(cluster_index, InverseMat(Hpp_c)));
         }
 
-        if (true)
+        if (lambda <= 1)
             SteepestDescentCorrection(Hpp_map, bp_map);
 
         for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
@@ -431,8 +431,6 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
             }
         }
     }
-
-    linear_solver_type_ = static_cast<LinearSolverType>(1);
 
     size_t sum_broken = 0;
 #pragma omp parallel for reduction(+ \
@@ -480,8 +478,8 @@ void StochasticBAProblem::SteepestDescentCorrection(std::unordered_map<size_t, M
     size_t i = 0;
     for (; it1 != bp_map.end(); it1++, it2++, i++)
     {
-        Vec3 bp_c = it1->second;
-        Mat3 Hpp_c = it2->second;
+        Vec3 const & bp_c = it1->second;
+        Mat3 const & Hpp_c = it2->second;
 
         for (size_t j = 0; j < 3; j++)
         {

@@ -15,6 +15,13 @@ DT Determinant(Mat3 const & M)
     return a - b + c;
 }
 
+Mat3 InverseMat(Mat3 const & mat)
+{
+    if (std::abs(Determinant(mat)) < EPSILON)
+        return Mat3::Zero();
+    return mat.inverse();
+}
+
 Mat3 AngleAxis2Matrix(Vec3 const & angle_axis)
 {
     DT angle = std::max(angle_axis.norm(), EPSILON);

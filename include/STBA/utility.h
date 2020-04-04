@@ -30,6 +30,7 @@ typedef Eigen::SparseMatrix<DT> SMat;
 typedef AngleAxis<DT> AxisAngle;
 
 DT Determinant(Mat3 const & M);
+Mat3 InverseMat(Mat3 const & mat);
 Mat3 AngleAxis2Matrix(Vec3 const & angle_axis);
 Vec3 Quaternion2AngleAxis(Vec4 const & quaternion);
 Vec4 AngleAxis2Quaternion(Vec3 const & angle_axis);
@@ -188,15 +189,6 @@ std::vector<size_t> SortIndexes(const std::vector<T> &v, bool increase = true)
 
     return idx;
 }
-
-template <typename DT, size_t N>
-Eigen::Matrix<DT, N, N, Eigen::RowMajor> InverseMat(Eigen::Matrix<DT, N, N, Eigen::RowMajor> const & mat)
-{
-    if (std::abs(Determinant(mat)) < EPSILON)
-        return Eigen::Matrix<DT, N, N, Eigen::RowMajor>::Zero();
-    return mat.inverse();
-}
-
 
 bool ReadCameraGroup(std::string const & camera_group_file,
                      std::unordered_map<size_t, size_t> & camera_group_map);

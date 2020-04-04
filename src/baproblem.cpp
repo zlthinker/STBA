@@ -861,7 +861,6 @@ bool BAProblem::EvaluateCamera(DT const lambda)
     }
 
     VecX delta_camera;
-    linear_solver_type_ = static_cast<LinearSolverType>(1);
     if (!SolveLinearSystem(A, intercept, delta_camera))
         return false;
     for (size_t i = 0; i < pose_num; i++)

@@ -113,8 +113,6 @@ void LMBAProblem::IncreaseRadius()
     double factor = 1/3.0;
     mu_ = std::min(1e32, mu_ / factor);
     decrease_factor_ = 3.0;
-
-    mu_ = std::min(mu_, 10.0);
 }
 
 /*!
