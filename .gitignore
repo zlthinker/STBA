@@ -6,3 +6,7 @@ CMakeLists.txt.user
 build*
 test/
 .gitignore
+GPATH
+GRTAGS
+GTAGS
+.vscode/
