@@ -4,6 +4,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <random>
 
 DT Determinant(Mat3 const & M)
 {

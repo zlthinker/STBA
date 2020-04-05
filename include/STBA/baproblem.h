@@ -70,9 +70,6 @@ public:
 
     void ReprojectionError(double & mean, double & median, double & max, bool const update) const;
 
-    inline void SetIntrinsicFixed(bool val) { fix_intrinsic_ = val; }
-    inline bool IsIntrinsicFixed() const { return fix_intrinsic_; }
-
     inline void SetThreadNum(size_t val)
     {
         thread_num_ = val;
@@ -107,10 +104,6 @@ protected:
     void GetJcJc(MatX & JcJc) const;
     void SetJcJc(size_t, Mat6 const &);
     void IncreJcJc(size_t, Mat6 const &);
-    void GetJiJi(size_t, Mat6 &) const;
-    void GetJiJi(MatX &) const;
-    void SetJiJi(size_t, Mat6 const &);
-    void IncreJiJi(size_t, Mat6 const &);
     void GetJpJp(size_t, Mat3 &) const;
     void SetJpJp(size_t, Mat3 const &);
     void IncreJpJp(size_t, Mat3 const &);
@@ -118,21 +111,11 @@ protected:
     void GetJcJp(size_t, size_t, Mat63 &) const;
     void SetJcJp(size_t, Mat63 const &);
     void SetJcJp(size_t, size_t, Mat63 const &);
-    void GetJcJi(size_t, Mat6 &) const;
-    void SetJcJi(size_t, Mat6 const &);
-    void IncreJcJi(size_t, Mat6 const &);
-    void GetJiJp(size_t, size_t, Mat63 &) const;
-    void SetJiJp(size_t, size_t, Mat63 const &);
-    void IncreJiJp(size_t, size_t, Mat63 const &);
     void GetJce(size_t, Vec6 &) const;
     void GetJce(std::vector<size_t> const &, VecX &) const;
     void GetJce(VecX &) const;
     void SetJce(size_t, Vec6 const &);
     void IncreJce(size_t, Vec6 const &);
-    void GetJie(size_t, Vec6 &) const;
-    void GetJie(VecX &) const;
-    void SetJie(size_t, Vec6 const &);
-    void IncreJie(size_t, Vec6 const &);
     void GetJpe(size_t, Vec3 &) const;
     void GetJpe(VecX &) const;
     void SetJpe(size_t, Vec3 const &);
@@ -141,9 +124,6 @@ protected:
     void GetEcw(std::vector<size_t> const &, VecX &) const;
     void GetEcw(VecX & Ecw) const;
     void SetECw(size_t, Vec6 const &);
-    void GetEiw(size_t group_index, Vec6 & Eiw) const;
-    void GetEiw(VecX & Eiw) const;
-    void SetEiw(size_t group_index, Vec6 const & Eiw);
     void GetPose(VecX &) const;
     void GetPoint(VecX &) const;
     void GetPoseUpdate(VecX &) const;
@@ -160,17 +140,11 @@ protected:
 
     void EvaluateJcJc(size_t pose_index, Mat6 & JCJC) const;
     void EvaluateJcJc();
-    void EvaluateJiJi(size_t group_index, Mat6 & JiJi) const;
-    void EvaluateJiJi();
     void EvaluateJpJp(size_t point_index, Mat3 & JPJP) const;
     virtual void EvaluateJpJp();
     void EvaluateJcJp(size_t proj_index, Mat63 & JcJp) const;
     void EvaluateJcJp(size_t pose_index, size_t point_index, Mat63 & JcJp) const;
     void EvaluateJcJp();
-    void EvaluateJcJi(size_t pose_index, Mat6 & JcJi) const;
-    void EvaluateJcJi();
-    void EvaluateJiJp(size_t group_index, size_t point_index, Mat63 & JiJp) const;
-    void EvaluateJiJp();
 
     void EvaluateJce(size_t pose_index, Vec6 & Je) const;
     void EvaluateJce(std::vector<size_t> const & pose_indexes, VecX & Je) const;
@@ -178,8 +152,6 @@ protected:
     void EvaluateJpe(size_t point_index, Vec3 & Je) const;
     void EvaluateJpe(std::vector<size_t> const & point_indexes, VecX & Je) const;
     virtual void EvaluateJpe();
-    void EvaluateJie(size_t group_index, Vec6 & Je) const;
-    void EvaluateJie();
 
     void EvaluateB(MatX & B) const;
     virtual bool EvaluateEcEc(size_t pose_index1, size_t pose_index2, Mat6 & EcEc) const;
@@ -187,13 +159,8 @@ protected:
     void EvaluateEcEc(std::vector<size_t> const & pose_indexes, SMat & EcEc) const;
     void EvaluateEcEc(MatX & EcEc) const;
     void EvaluateEcEc(SMat & EcEc) const;
-    void EvaluateEcEi(size_t pose_index, size_t group_index, Mat6 & EcEi) const;
-    void EvaluateEiEi(size_t group_index1, size_t group_index2, Mat6 & EiEi) const;
-    void EvaluateEE(MatX &) const;
     virtual void EvaluateEcw(size_t pose_index, Vec6 & Ecw) const;
     void EvaluateEcw();
-    void EvaluateEiw(size_t group_index, Vec6 & Eiw) const;
-    void EvaluateEiw();
 
     void EvaluateSchurComplement(std::vector<size_t> const & pose_indexes, MatX & S) const;
     void EvaluateSchurComplement(std::vector<size_t> const & pose_indexes, SMat & S) const;
@@ -202,38 +169,27 @@ protected:
     bool EvaluateDeltaPose(std::vector<size_t> const & pose_indexes, VecX & dy) const;
     bool EvaluateDeltaPose(std::vector<size_t> const & pose_indexes);
     virtual bool EvaluateDeltaPose();
-    virtual bool EvaluateDeltaPoseAndIntrinsic();
-    virtual bool EvaluateDeltaCamera();
     void EvaluateEDeltaPose(size_t point_index, Vec3 & Edy) const;
-    void EvaluateEDeltaIntrinsic(size_t point_index, Vec3 & Edy) const;
     void EvaluateEDelta(size_t point_index, Vec3 & Edy) const;
     virtual void EvaluateDeltaPoint(size_t point_index, Vec3 & dz);
     virtual void EvaluateDeltaPoint();
-    void EvaluateIntrinsics(std::vector<size_t> const & pose_indexes);
 
     void UpdateParam();
 
     void ClearUpdate();
     void ClearResidual();
     void ClearPoseJacobian();
-    void ClearIntrinsicJacobian();
     void ClearPointJacobian();
     void ClearJcJc();
-    void ClearJiJi();
     void ClearJpJp();
     void ClearJcJp();
-    void ClearJcJi();
-    void ClearJiJp();
     void ClearJce();
     void ClearJpe();
-    void ClearJie();
     void ClearECw();
     void GetDiagonal(VecX & diagonal) const;
     void SetDiagonal(VecX const & diagonal);
     void GetPoseDiagonal(VecX & diagonal) const;
     void SetPoseDiagonal(VecX const & diagonal);
-    void GetIntrinsicDiagonal(VecX & diagonal) const;
-    void SetIntrinsicDiagonal(VecX const & diagonal);
     void GetPointDiagonal(VecX & diagonal) const;
     void SetPointDiagonal(VecX const & diagonal);
     bool SolveLinearSystem(MatX const & A, VecX const & b, VecX & x) const;
@@ -265,20 +221,13 @@ protected:
     DT * residual_;                             // e - reprojection error
     DT * pose_jacobian_;                        // Jc, 2x6
     DT * point_jacobian_;                       // Jp, 2x3
-    DT * intrinsic_jacobian_;                   // Ji, 2x6
     DT * pose_jacobian_square_;                 // Jc^T Jc, 6x6
     DT * point_jacobian_square_;                // Jp^T Jp, 3x3
-    DT * intrinsic_jacobian_square_;            // Ji^T Ji, 6x6
     DT * pose_point_jacobian_product_;          // Jc^T Jp, 6x3
-    DT * pose_intrinsic_jacobian_product_;      // Jc^T Ji, 6x6
-    DT * intrinsic_point_jacobian_product_;     // Ji^T Jp, 6x3
     DT * pose_gradient_;                        // Jc^T e, 6x1
-    DT * intrinsic_gradient_;                   // Ji^T e, 6x1
     DT * point_gradient_;                       // Jp^T e, 3x1
     DT * Ec_Cinv_w_;                            // EC^-1w, E = Jc^TJp, w = -Jp^Te (-point_gradient), 6x1
-    DT * Ei_Cinv_w_;
     std::string debug_folder_;
-    bool fix_intrinsic_;
     size_t iter_;
     bool step_accept_;
     std::stringstream stream_;

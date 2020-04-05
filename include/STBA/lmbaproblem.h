@@ -18,7 +18,6 @@ public:
     inline void SetMaxIteration(size_t iter) { max_iteration_ = iter; }
 
 protected:
-    void Evaluate();
     void DecreaseRadius();  // When step rejected
     void IncreaseRadius();  // When step accepted
     void EvaluateRho(VecX const &);
@@ -33,8 +32,6 @@ protected:
 
     void AugmentPoseDiagonal();
     void ResetPoseDiagonal();
-    void AugmentIntrinsicDiagonal();
-    void ResetIntrinsicDiagonal();
     virtual void AugmentPointDiagonal();
     virtual void ResetPointDiagonal();
 

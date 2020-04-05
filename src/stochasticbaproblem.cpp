@@ -1,13 +1,13 @@
 #include "STBA/stochasticbaproblem.h"
 
 #include <fstream>
+#include <numeric>
 
 StochasticBAProblem::StochasticBAProblem() : LMBAProblem(), cluster_(NULL), batch_size_(1), inner_step_(4), complementary_clustering_(true)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(100);
     cluster_->SetTemperature(10);
-    SetIntrinsicFixed(true);
 }
 
 StochasticBAProblem::StochasticBAProblem(size_t max_iter,
@@ -20,7 +20,6 @@ StochasticBAProblem::StochasticBAProblem(size_t max_iter,
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(max_community);
     cluster_->SetTemperature(10);
-    SetIntrinsicFixed(true);
 }
 
 StochasticBAProblem::StochasticBAProblem(size_t max_iter,
@@ -36,7 +35,6 @@ StochasticBAProblem::StochasticBAProblem(size_t max_iter,
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(max_community);
     cluster_->SetTemperature(temperature);
-    SetIntrinsicFixed(true);
 }
 
 StochasticBAProblem::StochasticBAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num) :
@@ -44,7 +42,6 @@ StochasticBAProblem::StochasticBAProblem(size_t pose_num, size_t group_num, size
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(100);
-    SetIntrinsicFixed(true);
 }
 
 StochasticBAProblem::~StochasticBAProblem()

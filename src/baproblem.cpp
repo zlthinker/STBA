@@ -1,6 +1,7 @@
 #include "STBA/baproblem.h"
 
 #include <fstream>
+#include <numeric>
 #include <Eigen/IterativeLinearSolvers>
 
 BAProblem::BAProblem() :
@@ -8,21 +9,14 @@ BAProblem::BAProblem() :
     residual_(NULL),
     pose_jacobian_(NULL),
     point_jacobian_(NULL),
-    intrinsic_jacobian_(NULL),
     pose_jacobian_square_(NULL),
     point_jacobian_square_(NULL),
-    intrinsic_jacobian_square_(NULL),
     pose_point_jacobian_product_(NULL),
-    pose_intrinsic_jacobian_product_(NULL),
-    intrinsic_point_jacobian_product_(NULL),
     pose_gradient_(NULL),
-    intrinsic_gradient_(NULL),
     point_gradient_(NULL),
     Ec_Cinv_w_(NULL),
-    Ei_Cinv_w_(NULL),
     loss_function_(NULL),
     thread_num_(1),
-    fix_intrinsic_(false),
     max_degree_(1000),
     linear_solver_type_(ADAPTIVE)
 {
@@ -34,21 +28,14 @@ BAProblem::BAProblem(LossType loss_type) :
     residual_(NULL),
     pose_jacobian_(NULL),
     point_jacobian_(NULL),
-    intrinsic_jacobian_(NULL),
     pose_jacobian_square_(NULL),
     point_jacobian_square_(NULL),
-    intrinsic_jacobian_square_(NULL),
     pose_point_jacobian_product_(NULL),
-    pose_intrinsic_jacobian_product_(NULL),
-    intrinsic_point_jacobian_product_(NULL),
     pose_gradient_(NULL),
-    intrinsic_gradient_(NULL),
     point_gradient_(NULL),
     Ec_Cinv_w_(NULL),
-    Ei_Cinv_w_(NULL),
     loss_function_(NULL),
     thread_num_(1),
-    fix_intrinsic_(false),
     max_degree_(1000),
     linear_solver_type_(ADAPTIVE)
 {
@@ -67,7 +54,7 @@ BAProblem::BAProblem(LossType loss_type) :
 
 BAProblem::BAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num) :
     pose_block_(pose_num), point_block_(point_num), projection_block_(proj_num),
-    loss_function_(NULL), fix_intrinsic_(false), max_degree_(1000), linear_solver_type_(ADAPTIVE)
+    loss_function_(NULL), max_degree_(1000), linear_solver_type_(ADAPTIVE)
 {
     Create(pose_num, group_num, point_num, proj_num);
     loss_function_ = new HuberLoss();
@@ -105,16 +92,6 @@ bool BAProblem::Create(size_t pose_num, size_t group_num, size_t point_num, size
         pose_gradient_ = new DT[pose_num * 6];
         point_gradient_ = new DT[point_num * 3];
         Ec_Cinv_w_ = new DT[pose_num * 6];
-        if (!fix_intrinsic_)
-        {
-            intrinsic_gradient_ = new DT[group_num * 6];
-            intrinsic_jacobian_ = new DT[2 * proj_num * 6];
-            intrinsic_jacobian_square_ = new DT[group_num * 6 * 6];
-            pose_intrinsic_jacobian_product_ = new DT[pose_num * 6 * 6];
-            intrinsic_point_jacobian_product_ = new DT[group_num * point_num * 6 * 3];
-            std::fill(intrinsic_point_jacobian_product_, intrinsic_point_jacobian_product_ + group_num * point_num * 6 * 3, 0.0);
-            Ei_Cinv_w_ = new DT[group_num * 6];
-        }
     }
     catch (std::bad_alloc & e)
     {
@@ -234,16 +211,8 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block)
 
 void BAProblem::Update(BundleBlock & bundle_block) const
 {
-    size_t group_num = GroupNum();
     size_t pose_num = PoseNum();
     size_t point_num = PointNum();
-
-    for (size_t i = 0; i < group_num; i++)
-    {
-        size_t group_index = group_index_map_.find(i)->second;
-        BundleBlock::DGroup & group = bundle_block.GetGroup(group_index);
-        GetIntrinsic(i, group.intrinsic);
-    }
 
     for (size_t i = 0; i < pose_num; i++)
     {
@@ -398,24 +367,6 @@ void BAProblem::SetPoseJacobian(size_t proj_index, Mat23 const & jacobian_rotati
     pose_jacobian_[proj_index * 12 + 11] = jacobian_translation(1, 2);
 }
 
-void BAProblem::GetIntrinsicJacobian(size_t proj_index, Mat26 & jacobian) const
-{
-    assert(proj_index < projection_block_.ProjectionNum() && "[GetIntrinsicJacobian] Projection index out of range");
-    DT * ptr = intrinsic_jacobian_ + proj_index * 12;
-    jacobian = Mat26(ptr);
-}
-
-void BAProblem::SetIntrinsicJacobian(size_t proj_index, Mat26 const & jacobian)
-{
-    assert(proj_index < projection_block_.ProjectionNum() && "[GetIntrinsicJacobian] Projection index out of range");
-    DT * ptr = intrinsic_jacobian_ + proj_index * 12;
-    for (size_t i = 0; i < 6; i++)
-    {
-        ptr[i] = jacobian(0, i);
-        ptr[i + 6] = jacobian(1, i);
-    }
-}
-
 void BAProblem::GetPointJacobian(size_t proj_index, Mat23 & jacobian) const
 {
     assert(proj_index < projection_block_.ProjectionNum() && "[GetPointJacobian] Projection index out of range");
@@ -501,44 +452,6 @@ void BAProblem::IncreJcJc(size_t pose_index, Mat6 const & JcJc)
             pose_jacobian_square_[pose_index * 6 * 6 + i * 6 + j] += JcJc(i, j);
 }
 
-void BAProblem::GetJiJi(size_t group_index, Mat6 & JiJi) const
-{
-    assert(group_index < intrinsic_block_.GroupNum() && "[GetJiJi] Group index out of range");
-    DT * ptr = intrinsic_jacobian_square_ + group_index * 6 * 6;
-    JiJi = Mat6(ptr);
-}
-
-void BAProblem::GetJiJi(MatX & JiJi) const
-{
-    size_t group_num = GroupNum();
-    JiJi = MatX::Zero(group_num * 6, group_num * 6);
-
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Mat6 local_JiJi;
-        GetJiJi(i, local_JiJi);
-        JiJi.block(6 * i, 6 * i, 6, 6) = local_JiJi;
-    }
-}
-
-void BAProblem::SetJiJi(size_t group_index, Mat6 const & JiJi)
-{
-    assert(group_index < intrinsic_block_.GroupNum() && "[GetJiJi] Group index out of range");
-    DT * ptr = intrinsic_jacobian_square_ + group_index * 6 * 6;
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 6; j++)
-            ptr[i * 6 + j] = JiJi(i, j);
-}
-
-void BAProblem::IncreJiJi(size_t group_index, Mat6 const & JiJi)
-{
-    assert(group_index < intrinsic_block_.GroupNum() && "[GetJiJi] Group index out of range");
-    DT * ptr = intrinsic_jacobian_square_ + group_index * 6 * 6;
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 6; j++)
-            ptr[i * 6 + j] += JiJi(i, j);
-}
-
 void BAProblem::GetJpJp(size_t point_index, Mat3 & JpJp) const
 {
     assert(point_index < point_block_.PointNum() && "[GetJpJp] Point index out of range");
@@ -589,62 +502,6 @@ void BAProblem::SetJcJp(size_t pose_index, size_t point_index, Mat63 const & JcJ
     SetJcJp(proj_index, JcJp);
 }
 
-void BAProblem::GetJcJi(size_t pose_index, Mat6 & JcJi) const
-{
-    assert(pose_index < PoseNum() && "[GetJcJi] Pose index out of range");
-    DT * ptr = pose_intrinsic_jacobian_product_ + pose_index * 6 * 6;
-    JcJi = Mat6(ptr);
-}
-
-void BAProblem::SetJcJi(size_t pose_index, Mat6 const & JcJi)
-{
-    assert(pose_index < PoseNum() && "[GetJcJi] Pose index out of range");
-    DT * ptr = pose_intrinsic_jacobian_product_ + pose_index * 6 * 6;
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 6; j++)
-            ptr[i * 6 + j] = JcJi(i, j);
-}
-
-void BAProblem::IncreJcJi(size_t pose_index, Mat6 const & JcJi)
-{
-    assert(pose_index < PoseNum() && "[IncreJcJi] Pose index out of range");
-    DT * ptr = pose_intrinsic_jacobian_product_ + pose_index * 6 * 6;
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 6; j++)
-            ptr[i * 6 + j] += JcJi(i, j);
-}
-
-void BAProblem::GetJiJp(size_t group_index, size_t point_index, Mat63 & JiJp) const
-{
-    assert(group_index < GroupNum() && "[GetJiJp] Group index out of range");
-    assert(point_index < PointNum() && "[GetJiJp] Point index out of range");
-    DT * ptr = intrinsic_point_jacobian_product_ + (group_index * PointNum() + point_index) * 6 * 3;
-    JiJp = Mat63(ptr);
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 3; j++)
-            JiJp(i, j) = ptr[i * 3 + j];
-}
-
-void BAProblem::SetJiJp(size_t group_index, size_t point_index, Mat63 const & JiJp)
-{
-    assert(group_index < GroupNum() && "[GetJiJp] Group index out of range");
-    assert(point_index < PointNum() && "[GetJiJp] Point index out of range");
-    DT * ptr = intrinsic_point_jacobian_product_ + (group_index * PointNum() + point_index) * 6 * 3;
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 3; j++)
-            ptr[i * 3 + j] = JiJp(i, j);
-}
-
-void BAProblem::IncreJiJp(size_t group_index, size_t point_index, Mat63 const & JiJp)
-{
-    assert(group_index < GroupNum() && "[GetJiJp] Group index out of range");
-    assert(point_index < PointNum() && "[GetJiJp] Point index out of range");
-    DT * ptr = intrinsic_point_jacobian_product_ + (group_index * PointNum() + point_index) * 6 * 3;
-    for (size_t i = 0; i < 6; i++)
-        for (size_t j = 0; j < 3; j++)
-            ptr[i * 3 + j] += JiJp(i, j);
-}
-
 void BAProblem::GetJce(size_t pose_index, Vec6 & Jce) const
 {
     assert(pose_index < pose_block_.PoseNum() && "[GetJce] Pose index out of range");
@@ -690,42 +547,6 @@ void BAProblem::IncreJce(size_t pose_index, Vec6 const & Jce)
     for (size_t i = 0; i < 6; i++)
         pose_gradient_[pose_index * 6 + i] += Jce(i);
 }
-
-void BAProblem::GetJie(size_t group_index, Vec6 & Jie) const
-{
-    assert(group_index < GroupNum() && "[GetJie] Group index out of range");
-    DT * ptr = intrinsic_gradient_ + group_index * 6;
-    Jie = Vec6(ptr);
-}
-
-void BAProblem::GetJie(VecX & Jie) const
-{
-    size_t group_num = GroupNum();
-    Jie.resize(group_num * 6);
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Vec6 local_Jie;
-        GetJie(i, local_Jie);
-        Jie.segment(6 * i, 6) = local_Jie;
-    }
-}
-
-void BAProblem::SetJie(size_t group_index, Vec6 const & Jie)
-{
-    assert(group_index < GroupNum() && "[GetJie] Group index out of range");
-    DT * ptr = intrinsic_gradient_ + group_index * 6;
-    for (size_t i = 0; i < 6; i++)
-        ptr[i] = Jie(i);
-}
-
-void BAProblem::IncreJie(size_t group_index, Vec6 const & Jie)
-{
-    assert(group_index < GroupNum() && "[GetJie] Group index out of range");
-    DT * ptr = intrinsic_gradient_ + group_index * 6;
-    for (size_t i = 0; i < 6; i++)
-        ptr[i] += Jie(i);
-}
-
 
 void BAProblem::GetJpe(size_t point_index, Vec3 & Jpe) const
 {
@@ -797,32 +618,6 @@ void BAProblem::SetECw(size_t pose_index, Vec6 const & ECw)
     assert(pose_index < pose_block_.PoseNum() && "[SetECw] Pose index out of range");
     for (size_t i = 0; i < 6; i++)
         Ec_Cinv_w_[pose_index * 6 + i] = ECw(i);
-}
-
-void BAProblem::GetEiw(size_t group_index, Vec6 & Eiw) const
-{
-    assert(group_index < GroupNum() && "[GetEiw] Group index out of range");
-    DT * ptr = Ei_Cinv_w_ + group_index * 6;
-    Eiw = Vec6(ptr);
-}
-
-void BAProblem::GetEiw(VecX & Eiw) const
-{
-    size_t group_num = GroupNum();
-    Eiw = VecX::Zero(6 * group_num);
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Vec6 local_Eiw;
-        GetEiw(i, local_Eiw);
-        Eiw.segment(6 * i, 6) = local_Eiw;
-    }
-}
-
-void BAProblem::SetEiw(size_t group_index, Vec6 const & Eiw)
-{
-    assert(group_index < GroupNum() && "[SetEiw] Group index out of range");
-    for (size_t i = 0; i < 6; i++)
-        Ei_Cinv_w_[group_index * 6 + i] = Eiw(i);
 }
 
 void BAProblem::GetPose(VecX & poses) const
@@ -930,12 +725,6 @@ double BAProblem::EvaluateSquareResidual(bool const update) const
             angle_axis += delta_angle_axis;
             translation += delta_translation;
             point += delta_point;
-            if (!fix_intrinsic_)
-            {
-                Vec6 delta_intrinsic;
-                intrinsic_block_.GetDeltaIntrinsic(group_index, delta_intrinsic);
-                intrinsic += delta_intrinsic;
-            }
         }
         Vec2 reprojection;
         if (!Project(intrinsic(0), intrinsic(1), intrinsic(2), angle_axis, translation, point, intrinsic.tail<3>(), reprojection))
@@ -955,7 +744,6 @@ void BAProblem::ReprojectionError(double & mean, double & median, double & max, 
     size_t proj_num = projection_block_.ProjectionNum();
     assert(proj_num > 0 && "[ReprojectionError] Empty projection");
     std::vector<double> errors(proj_num, 0.0);
-
 
 #ifdef OPENMP
 #pragma omp parallel for
@@ -980,12 +768,6 @@ void BAProblem::ReprojectionError(double & mean, double & median, double & max, 
             angle_axis += delta_angle_axis;
             translation += delta_translation;
             point += delta_point;
-            if (!fix_intrinsic_)
-            {
-                Vec6 delta_intrinsic;
-                intrinsic_block_.GetDeltaIntrinsic(group_index, delta_intrinsic);
-                intrinsic += delta_intrinsic;
-            }
         }
         Vec2 reprojection;
         if (!Project(intrinsic(0), intrinsic(1), intrinsic(2), angle_axis, translation, point, intrinsic.tail<3>(), reprojection))
@@ -1038,12 +820,6 @@ double BAProblem::EvaluateSquareError(bool const update) const
             angle_axis += delta_angle_axis;
             translation += delta_translation;
             point += delta_point;
-            if (!fix_intrinsic_)
-            {
-                Vec6 delta_intrinsic;
-                intrinsic_block_.GetDeltaIntrinsic(group_index, delta_intrinsic);
-                intrinsic += delta_intrinsic;
-            }
         }
         Vec2 reprojection;
         if (!Project(intrinsic(0), intrinsic(1), intrinsic(2), angle_axis, translation, point, intrinsic.tail<3>(), reprojection))
@@ -1055,10 +831,6 @@ double BAProblem::EvaluateSquareError(bool const update) const
     return error * 0.5;
 }
 
-
-/*!
- * @Depend EvaluateResidual
- */
 void BAProblem::EvaluateJacobian()
 {
     ClearPoseJacobian();
@@ -1101,8 +873,6 @@ void BAProblem::EvaluateJacobian()
 
         SetPoseJacobian(j, jacobian_rotation, jacobian_translation);
         SetPointJacobian(j, jacobian_point);
-        if (!fix_intrinsic_)
-            SetIntrinsicJacobian(j, jacobian_intrinsic);
     }
 }
 
@@ -1142,41 +912,6 @@ void BAProblem::EvaluateJcJc()
         Mat6 jcjc;
         EvaluateJcJc(i, jcjc);
         SetJcJc(i, jcjc);
-    }
-}
-
-void BAProblem::EvaluateJiJi(size_t group_index, Mat6 & JiJi) const
-{
-    JiJi.setZero();
-    std::unordered_map<size_t, std::vector<size_t> >::const_iterator it1 = group_pose_map_.find(group_index);
-    assert(it1 != group_pose_map_.end() && "[EvaluateJiJi] Group index not found");
-    std::vector<size_t> const & pose_indexes = it1->second;
-    for (size_t i = 0; i < pose_indexes.size(); i++)
-    {
-        size_t pose_index = pose_indexes[i];
-        std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it2 = pose_projection_map_.find(pose_index);
-        assert(it2 != pose_projection_map_.end() && "[EvaluateJiJi] Pose index not found");
-        std::unordered_map<size_t, size_t> const & map = it2->second;
-        std::unordered_map<size_t, size_t>::const_iterator it3 = map.begin();
-        for (; it3 != map.end(); it3++)
-        {
-            size_t proj_index = it3->second;
-            Mat26 jacobian;
-            GetIntrinsicJacobian(proj_index, jacobian);
-            JiJi += jacobian.transpose() * jacobian;
-        }
-    }
-}
-
-void BAProblem::EvaluateJiJi()
-{
-    if (fix_intrinsic_) return;
-    ClearJiJi();
-    for (size_t i = 0; i < GroupNum(); i++)
-    {
-        Mat6 JiJi;
-        EvaluateJiJi(i, JiJi);
-        SetJiJi(i, JiJi);
     }
 }
 
@@ -1253,79 +988,6 @@ void BAProblem::EvaluateJcJp()
         Mat63 JcJp;
         EvaluateJcJp(i, JcJp);
         SetJcJp(i, JcJp);
-    }
-}
-
-void BAProblem::EvaluateJcJi(size_t pose_index, Mat6 & JcJi) const
-{
-    JcJi.setZero();
-    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = pose_projection_map_.find(pose_index);
-    assert(it1 != pose_projection_map_.end() && "[EvaluateJcJi] Pose index not found");
-    std::unordered_map<size_t, size_t> const & map = it1->second;
-    std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
-    for (; it2 != map.end(); it2++)
-    {
-        size_t proj_index = it2->second;
-        Mat26 pose_jacobian, intrinsic_jacobian;
-        GetPoseJacobian(proj_index, pose_jacobian);
-        GetIntrinsicJacobian(proj_index, intrinsic_jacobian);
-        JcJi += pose_jacobian.transpose() * intrinsic_jacobian;
-    }
-}
-
-void BAProblem::EvaluateJcJi()
-{
-    if (fix_intrinsic_) return;
-    ClearJcJi();
-    size_t pose_num = PoseNum();
-    for (size_t i = 0; i < pose_num; i++)
-    {
-        Mat6 JcJi;
-        EvaluateJcJi(i, JcJi);
-        SetJcJi(i, JcJi);
-    }
-}
-
-/*!
- * @brief A point can be projected into multiple cameras involving several intrinsic groups.
- */
-void BAProblem::EvaluateJiJp(size_t group_index, size_t point_index, Mat63 & JiJp) const
-{
-    JiJp.setZero();
-    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(point_index);
-    assert(it1 != point_projection_map_.end() && "[EvaluateJiJp] Point index not found");
-    std::unordered_map<size_t, size_t> const & map = it1->second;
-    std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
-    for (; it2 != map.end(); it2++)
-    {
-        size_t pose_index = it2->first;
-        size_t proj_index = it2->second;
-        size_t local_group_index = GetPoseGroup(pose_index);
-        if (group_index == local_group_index)
-        {
-            Mat26 intrinsic_jacobian;
-            Mat23 point_jacobian;
-            GetIntrinsicJacobian(proj_index, intrinsic_jacobian);
-            GetPointJacobian(proj_index, point_jacobian);
-            JiJp += intrinsic_jacobian.transpose() * point_jacobian;
-        }
-    }
-}
-
-void BAProblem::EvaluateJiJp()
-{
-    if (fix_intrinsic_) return;
-    ClearJiJp();
-    size_t point_num = PointNum();
-    size_t group_num = GroupNum();
-    for (size_t i = 0; i < point_num; i++)
-    {
-        for (size_t j = 0; j < group_num; j++)
-        {
-            Mat63 JiJp;
-            EvaluateJiJp(j, i, JiJp);
-            SetJiJp(j, i, JiJp);
-        }
     }
 }
 
@@ -1430,44 +1092,6 @@ void BAProblem::EvaluateJpe()
     }
 }
 
-void BAProblem::EvaluateJie(size_t group_index, Vec6 & Je) const
-{
-    Je.setZero();
-    std::unordered_map<size_t, std::vector<size_t> >::const_iterator it1 =  group_pose_map_.find(group_index);
-    assert(it1 != group_pose_map_.end() && "[EvaluateJie] Group index not found");
-    std::vector<size_t> const & pose_indexes = it1->second;
-    for (size_t i = 0; i < pose_indexes.size(); i++)
-    {
-        size_t pose_index = pose_indexes[i];
-        std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it2 = pose_projection_map_.find(pose_index);
-        assert(it2 != pose_projection_map_.end() && "[EvaluateJie] Pose index not found");
-        std::unordered_map<size_t, size_t> const & map = it2->second;
-        std::unordered_map<size_t, size_t>::const_iterator it3 = map.begin();
-        for (; it3 != map.end(); it3++)
-        {
-            size_t proj_index = it3->second;
-            Mat26 intrinsic_jacobian;
-            Vec2 residual;
-            GetIntrinsicJacobian(proj_index, intrinsic_jacobian);
-            GetResidual(proj_index, residual);
-            Je += intrinsic_jacobian.transpose() * residual;
-        }
-    }
-}
-
-void BAProblem::EvaluateJie()
-{
-    if (fix_intrinsic_) return;
-    ClearJie();
-    size_t group_num = GroupNum();
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Vec6 Je;
-        EvaluateJie(i, Je);
-        SetJie(i, Je);
-    }
-}
-
 bool BAProblem::EvaluateEcEc(size_t pose_index1, size_t pose_index2, Mat6 & EcEc) const
 {
     EcEc.setZero();
@@ -1492,7 +1116,6 @@ bool BAProblem::EvaluateEcEc(size_t pose_index1, size_t pose_index2, Mat6 & EcEc
     }
     return true;
 }
-
 
 /*!
  * @brief A 6x6 EC_-1E^T block w.r.t cameras is occupied iff two cameras share common points.
@@ -1652,101 +1275,6 @@ void BAProblem::EvaluateEcEc(SMat & EcEc) const
     }
 }
 
-void BAProblem::EvaluateEcEi(size_t pose_index, size_t group_index, Mat6 & EcEi) const
-{
-    EcEi.setZero();
-    if (group_index != GetPoseGroup(pose_index)) return;
-
-    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = pose_projection_map_.find(pose_index);
-    assert(it1 != pose_projection_map_.end() && "[EvaluateEcEi] Pose index not found");
-    std::unordered_map<size_t, size_t> const & map = it1->second;
-    std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
-    for (; it2 != map.end(); it2++)
-    {
-        size_t point_index = it2->first;
-        Mat3 JpJp;
-        GetJpJp(point_index, JpJp);
-        Mat63 JcJp, JiJp;
-        GetJcJp(pose_index, point_index, JcJp);
-        GetJiJp(group_index, point_index, JiJp);
-
-        if (std::abs(Determinant(JpJp)) > EPSILON)
-        {
-            Mat3 JpJp_inv = JpJp.inverse();
-            EcEi += JcJp * JpJp_inv * JiJp.transpose();
-        }
-    }
-}
-
-void BAProblem::EvaluateEiEi(size_t group_index1, size_t group_index2, Mat6 & EiEi) const
-{
-    EiEi.setZero();
-
-    size_t point_num = PointNum();
-    for (size_t i = 0; i < point_num; i++)
-    {
-        Mat3 JpJp;
-        GetJpJp(i, JpJp);
-        Mat63 Ji1Jp, Ji2Jp;
-        GetJiJp(group_index1, i, Ji1Jp);
-        GetJiJp(group_index2, i, Ji2Jp);
-
-        if (std::abs(Determinant(JpJp)) > EPSILON)
-        {
-            Mat3 JpJp_inv = JpJp.inverse();
-            EiEi += Ji1Jp * JpJp_inv * Ji2Jp.transpose();
-        }
-    }
-}
-
-void BAProblem::EvaluateEE(MatX & EE) const
-{
-    if (fix_intrinsic_)
-    {
-        EvaluateEcEc(EE);
-        return;
-    }
-    size_t pose_num = PoseNum();
-    size_t group_num = GroupNum();
-    size_t dimension = (pose_num + group_num) * 6;
-    EE = MatX::Zero(dimension, dimension);
-    for (size_t i = 0; i < pose_num; i++)
-    {
-        Mat6 diagonal_EcEc;
-        EvaluateEcEc(i, i, diagonal_EcEc);
-        EE.block(6 * i, 6 * i, 6, 6) = diagonal_EcEc;
-        for (size_t j = i+1; j < pose_num; j++)
-        {
-            Mat6 local_EcEc;
-            if (EvaluateEcEc(i, j, local_EcEc))
-            {
-                EE.block(6 * i, 6 * j, 6, 6) = local_EcEc;
-                EE.block(6 * j, 6 * i, 6, 6) = local_EcEc.transpose();
-            }
-        }
-
-        size_t group_index = GetPoseGroup(i);
-        Mat6 local_EcEi;
-        EvaluateEcEi(i, group_index, local_EcEi);
-        EE.block(6 * i, 6 * (pose_num + group_index), 6, 6) = local_EcEi;
-        EE.block(6 * (pose_num + group_index), 6 * i, 6, 6) = local_EcEi.transpose();
-    }
-
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Mat6 diagonal_EiEi;
-        EvaluateEiEi(i, i, diagonal_EiEi);
-        EE.block(6 * (pose_num + i), 6 * (pose_num + i), 6, 6) = diagonal_EiEi;
-        for (size_t j = i+1; j < group_num; j++)
-        {
-            Mat6 local_EiEi;
-            EvaluateEiEi(i, j, local_EiEi);
-            EE.block(6 * (pose_num + i), 6 * (pose_num + j), 6, 6) = local_EiEi;
-            EE.block(6 * (pose_num + j), 6 * (pose_num + i), 6, 6) = local_EiEi.transpose();
-        }
-    }
-}
-
 /*!
  * @brief EcC^-1w, w = -Jp^Te
  */
@@ -1792,75 +1320,14 @@ void BAProblem::EvaluateEcw()
     }
 }
 
-// TODO: update for better memory usage
-void BAProblem::EvaluateEiw(size_t group_index, Vec6 & Eiw) const
-{
-    Eiw = Vec6::Zero();
-    size_t point_num = PointNum();
-    for (size_t i = 0; i < point_num; i++)
-    {
-        Mat63 JiJp;
-        Mat3 JpJp;
-        Vec3 Jpe;
-        GetJiJp(group_index, i, JiJp);
-        GetJpJp(i, JpJp);
-        GetJpe(i, Jpe);
-
-        if (std::abs(Determinant(JpJp)) > EPSILON)
-        {
-            Mat3 JpJp_inv = JpJp.inverse();
-            Eiw += JiJp * JpJp_inv * (-Jpe);
-            assert(IsNumericalValid(Eiw));
-        }
-    }
-}
-
-void BAProblem::EvaluateEiw()
-{
-    if (fix_intrinsic_) return;
-    size_t group_num = GroupNum();
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Vec6 local_Eiw;
-        EvaluateEiw(i, local_Eiw);
-        SetEiw(i, local_Eiw);
-    }
-}
-
 
 /*!
  * @brief Read Schur Complement Trick in https://zlthinker.github.io/optimization-for-least-square-problem#schur-complement-trick
  */
 void BAProblem::EvaluateB(MatX & B) const
 {
-    if (fix_intrinsic_)
-    {
-        GetJcJc(B);
-        return;
-    }
-    size_t pose_num = PoseNum();
-    size_t group_num = GroupNum();
-    size_t dimension = (pose_num + group_num) * 6;
-    B = MatX::Zero(dimension, dimension);
-
-    for (size_t i = 0; i < pose_num; i++)
-    {
-        Mat6 local_JcJc;
-        GetJcJc(i, local_JcJc);
-        B.block(6 * i, 6 * i, 6, 6) = local_JcJc;
-
-        Mat6 local_JcJi;
-        GetJcJi(i, local_JcJi);
-        size_t group_index = GetPoseGroup(i);
-        B.block(6 * i, 6 * (pose_num + group_index), 6, 6) = local_JcJi;
-        B.block(6 * (pose_num + group_index), 6 * i, 6, 6) = local_JcJi.transpose();
-    }
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Mat6 local_JiJi;
-        GetJiJi(i, local_JiJi);
-        B.block(6 * (pose_num + i), 6 * (pose_num + i), 6, 6) = local_JiJi;
-    }
+    GetJcJc(B);
+    return;
 }
 
 /*!
@@ -1893,7 +1360,7 @@ void BAProblem::EvaluateSchurComplement(MatX & S) const
 {
     MatX B, EE;
     EvaluateB(B);
-    EvaluateEE(EE);
+    EvaluateEcEc(EE);
     S = B - EE;
 }
 
@@ -1957,59 +1424,11 @@ bool BAProblem::EvaluateDeltaPose(std::vector<size_t> const & pose_indexes)
     return true;
 }
 
-/*!
- * @brief Ommit intrinsics
- */
 bool BAProblem::EvaluateDeltaPose()
 {
     std::vector<size_t> pose_indexes(PoseNum());
     std::iota(pose_indexes.begin(), pose_indexes.end(), 0);
     return EvaluateDeltaPose(pose_indexes);
-}
-
-/*!
- * @brief Include intrinsics
- */
-bool BAProblem::EvaluateDeltaPoseAndIntrinsic()
-{
-    MatX S;
-    EvaluateSchurComplement(S);
-    VecX Ecw, Eiw;
-    GetEcw(Ecw);
-    GetEiw(Eiw);
-    VecX Ew(Ecw.size() + Eiw.size());
-    Ew << Ecw, Eiw;
-    VecX Jce, Jie;
-    GetJce(Jce);
-    GetJie(Jie);
-    VecX Je(Jce.size() + Jie.size());
-    Je << Jce, Jie;
-
-    VecX b = -Je - Ew;
-    VecX dy;
-    if (!SolveLinearSystemDense(S, b, dy))  return false;
-
-    size_t pose_num = PoseNum();
-    size_t group_num = GroupNum();
-    for (size_t i = 0; i < pose_num; i++)
-    {
-        Vec3 delta_rotation = dy.segment(i * 6, 3);
-        Vec3 delta_translation = dy.segment(i * 6 + 3, 3);
-        pose_block_.SetDeltaPose(i, delta_rotation, delta_translation);
-    }
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Vec6 delta_intrinsic = dy.segment((i + pose_num) * 6, 6);
-        intrinsic_block_.SetDeltaIntrinsic(i, delta_intrinsic);
-    }
-    return true;
-}
-
-bool BAProblem::EvaluateDeltaCamera()
-{
-    if (fix_intrinsic_)
-        return EvaluateDeltaPose();
-    return EvaluateDeltaPoseAndIntrinsic();
 }
 
 /*!
@@ -2034,33 +1453,11 @@ void BAProblem::EvaluateEDeltaPose(size_t point_index, Vec3 & Edy) const
     }
 }
 
-void BAProblem::EvaluateEDeltaIntrinsic(size_t point_index, Vec3 & Edy) const
-{
-    Edy = Vec3::Zero();
-
-    size_t group_num = GroupNum();
-    for (size_t i = 0; i < group_num; i++)
-    {
-        Mat63 JiJp;
-        Vec6 dy;
-        GetJiJp(i, point_index, JiJp);
-        intrinsic_block_.GetDeltaIntrinsic(i, dy);
-        Edy += JiJp.transpose() * dy;
-    }
-}
-
 void BAProblem::EvaluateEDelta(size_t point_index, Vec3 & Edy) const
 {
     Edy = Vec3::Zero();
 
     EvaluateEDeltaPose(point_index, Edy);
-
-    if (!fix_intrinsic_)
-    {
-        Vec3 Edi;
-        EvaluateEDeltaIntrinsic(point_index, Edi);
-        Edy += Edi;
-    }
 }
 
 /*!
@@ -2096,82 +1493,16 @@ void BAProblem::EvaluateDeltaPoint()
     }
 }
 
-/*!
- * @brief Solve the intrinsics by solving a linear equation system.
- * @param pose_indexes - The indexes of cameras sharing the same set of intrinsics.
- */
-void BAProblem::EvaluateIntrinsics(std::vector<size_t> const & pose_indexes)
-{
-    size_t pose_num = pose_indexes.size();
-    MatX A = Mat6::Zero();
-    VecX b = Vec6::Zero();
-    for (size_t i = 0; i < pose_num; i++)
-    {
-        size_t pose_index = pose_indexes[i];
-        Vec3 rotation, translation;
-        Vec6 intrinsic;
-        pose_block_.GetPose(pose_index, rotation, translation);
-        GetPoseIntrinsic(pose_index, intrinsic);
-        std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = pose_projection_map_.find(pose_index);
-        if (it1 == pose_projection_map_.end())  continue;
-        std::unordered_map<size_t, size_t> const & map = it1->second;
-        std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
-        for (; it2 != map.end(); it2++)
-        {
-            size_t point_index = it2->first;
-            size_t proj_index = it2->second;
-            Vec3 point;
-            Vec2 projection;
-            point_block_.GetPoint(point_index, point);
-            projection_block_.GetProjection(proj_index, projection);
-            Vec2 reprojection;
-            if (!Project(intrinsic(0), intrinsic(1), intrinsic(2), rotation, translation, point, intrinsic.tail<3>(), reprojection))
-                continue;
-            Vec2 reprojection_error = reprojection - projection;
-            loss_function_->CorrectResiduals(reprojection_error);
-            if (loss_function_->Loss(reprojection_error.squaredNorm()) == 0.0)
-                continue;
-
-            Vec3 local_point = RotatePoint(rotation, point) + translation;
-            double depth = std::max(local_point(2), EPSILON);
-            double x = local_point(0) / depth;
-            double y = local_point(1) / depth;
-            double r2 = x * x + y * y;
-            double r4 = r2 * r2;
-            double r6 = r2 * r4;
-            Mat26 coeff;
-            coeff(0, 0) = x * r2;
-            coeff(0, 1) = x * r4;
-            coeff(0, 2) = x * r6;
-            coeff(0, 3) = x;
-            coeff(0, 4) = 1;
-            coeff(0, 5) = 0;
-            coeff(1, 0) = y * r2;
-            coeff(1, 1) = y * r4;
-            coeff(1, 2) = y * r6;
-            coeff(1, 3) = y;
-            coeff(1, 4) = 0;
-            coeff(1, 5) = 1;
-            A += coeff.transpose() * coeff;
-            b += coeff.transpose() * projection;
-        }
-    }
-    VecX intrinsics;
-    SolveLinearSystemDense(A, b, intrinsics);
-}
-
 void BAProblem::UpdateParam()
 {
     pose_block_.UpdatePose();
     point_block_.UpdatePoint();
-    if (!fix_intrinsic_)    intrinsic_block_.UpdateIntrinsics();
 }
 
 void BAProblem::ClearUpdate()
 {
     pose_block_.ClearUpdate();
     point_block_.ClearUpdate();
-    intrinsic_block_.ClearUpdate();
 }
 
 void BAProblem::ClearResidual()
@@ -2184,12 +1515,6 @@ void BAProblem::ClearPoseJacobian()
     std::fill(pose_jacobian_, pose_jacobian_ + 2 * ProjectionNum() * 6, 0.0);
 }
 
-void BAProblem::ClearIntrinsicJacobian()
-{
-    if (intrinsic_jacobian_)
-        std::fill(intrinsic_jacobian_, intrinsic_jacobian_ + 2 * ProjectionNum() * 6, 0.0);
-}
-
 void BAProblem::ClearPointJacobian()
 {
     std::fill(point_jacobian_, point_jacobian_ + 2 * ProjectionNum() * 3, 0.0);
@@ -2198,12 +1523,6 @@ void BAProblem::ClearPointJacobian()
 void BAProblem::ClearJcJc()
 {
     std::fill(pose_jacobian_square_, pose_jacobian_square_ + PoseNum() * 6 * 6, 0.0);
-}
-
-void BAProblem::ClearJiJi()
-{
-    if (intrinsic_jacobian_square_)
-        std::fill(intrinsic_jacobian_square_, intrinsic_jacobian_square_ + GroupNum() * 6 * 6, 0.0);
 }
 
 void BAProblem::ClearJpJp()
@@ -2216,18 +1535,6 @@ void BAProblem::ClearJcJp()
     std::fill(pose_point_jacobian_product_, pose_point_jacobian_product_ + ProjectionNum() * 6 * 3, 0.0);
 }
 
-void BAProblem::ClearJcJi()
-{
-    if (pose_intrinsic_jacobian_product_)
-        std::fill(pose_intrinsic_jacobian_product_, pose_intrinsic_jacobian_product_ + PoseNum() * 6 * 6, 0.0);
-}
-
-void BAProblem::ClearJiJp()
-{
-    if (intrinsic_point_jacobian_product_)
-        std::fill(intrinsic_point_jacobian_product_, intrinsic_point_jacobian_product_ + GroupNum() * PointNum() * 6 * 3, 0.0);
-}
-
 void BAProblem::ClearJce()
 {
     std::fill(pose_gradient_, pose_gradient_ + PoseNum() * 6, 0.0);
@@ -2236,12 +1543,6 @@ void BAProblem::ClearJce()
 void BAProblem::ClearJpe()
 {
     std::fill(point_gradient_, point_gradient_ + PointNum() * 3, 0.0);
-}
-
-void BAProblem::ClearJie()
-{
-    if (intrinsic_gradient_)
-        std::fill(intrinsic_gradient_, intrinsic_gradient_ + GroupNum() * 6, 0.0);
 }
 
 void BAProblem::ClearECw()
@@ -2255,9 +1556,8 @@ void BAProblem::ClearECw()
 void BAProblem::GetDiagonal(VecX & diagonal) const
 {
     size_t pose_num = PoseNum();
-    size_t group_num = fix_intrinsic_ ? 0 : GroupNum();
     size_t point_num = PointNum();
-    diagonal.resize(6 * pose_num + 6 * group_num + 3 * point_num);
+    diagonal.resize(6 * pose_num + 3 * point_num);
     for (size_t i = 0; i < pose_num; i++)
     {
         diagonal(6 * i) = pose_jacobian_square_[6 * 6 * i];
@@ -2267,29 +1567,19 @@ void BAProblem::GetDiagonal(VecX & diagonal) const
         diagonal(6 * i + 4) = pose_jacobian_square_[6 * 6 * i + 28];
         diagonal(6 * i + 5) = pose_jacobian_square_[6 * 6 * i + 35];
     }
-    for (size_t i = 0; i < group_num; i++)
-    {
-        diagonal(6 * (pose_num + i)) = intrinsic_jacobian_square_[6 * 6 * i];
-        diagonal(6 * (pose_num + i) + 1) = intrinsic_jacobian_square_[6 * 6 * i + 7];
-        diagonal(6 * (pose_num + i) + 2) = intrinsic_jacobian_square_[6 * 6 * i + 14];
-        diagonal(6 * (pose_num + i) + 3) = intrinsic_jacobian_square_[6 * 6 * i + 21];
-        diagonal(6 * (pose_num + i) + 4) = intrinsic_jacobian_square_[6 * 6 * i + 28];
-        diagonal(6 * (pose_num + i) + 5) = intrinsic_jacobian_square_[6 * 6 * i + 35];
-    }
     for (size_t i = 0; i < point_num; i++)
     {
-        diagonal(6 * (pose_num + group_num) + 3 * i) = point_jacobian_square_[3 * 3 * i];
-        diagonal(6 * (pose_num + group_num) + 3 * i + 1) = point_jacobian_square_[3 * 3 * i + 4];
-        diagonal(6 * (pose_num + group_num) + 3 * i + 2) = point_jacobian_square_[3 * 3 * i + 8];
+        diagonal(6 * pose_num + 3 * i) = point_jacobian_square_[3 * 3 * i];
+        diagonal(6 * pose_num + 3 * i + 1) = point_jacobian_square_[3 * 3 * i + 4];
+        diagonal(6 * pose_num + 3 * i + 2) = point_jacobian_square_[3 * 3 * i + 8];
     }
 }
 
 void BAProblem::SetDiagonal(VecX const & diagonal)
 {
     size_t pose_num = PoseNum();
-    size_t group_num = fix_intrinsic_ ? 0 : GroupNum();
     size_t point_num = PointNum();
-    assert(pose_num * 6 + group_num * 6 + point_num * 3 == diagonal.size() && "[SetDiagonal] Size disagrees");
+    assert(pose_num * 6 + point_num * 3 == diagonal.size() && "[SetDiagonal] Size disagrees");
     for (size_t i = 0; i < pose_num; i++)
     {
         pose_jacobian_square_[6 * 6 * i] = diagonal(6 * i);
@@ -2299,20 +1589,11 @@ void BAProblem::SetDiagonal(VecX const & diagonal)
         pose_jacobian_square_[6 * 6 * i + 28] = diagonal(6 * i + 4);
         pose_jacobian_square_[6 * 6 * i + 35] = diagonal(6 * i + 5);
     }
-    for (size_t i = 0; i < group_num; i++)
-    {
-        intrinsic_jacobian_square_[6 * 6 * i] = diagonal(6 * (pose_num + i));
-        intrinsic_jacobian_square_[6 * 6 * i + 7] = diagonal(6 * (pose_num + i) + 1);
-        intrinsic_jacobian_square_[6 * 6 * i + 14] = diagonal(6 * (pose_num + i) + 2);
-        intrinsic_jacobian_square_[6 * 6 * i + 21] = diagonal(6 * (pose_num + i) + 3);
-        intrinsic_jacobian_square_[6 * 6 * i + 28] = diagonal(6 * (pose_num + i) + 4);
-        intrinsic_jacobian_square_[6 * 6 * i + 35] = diagonal(6 * (pose_num + i) + 5);
-    }
     for (size_t i = 0; i < point_num; i++)
     {
-        point_jacobian_square_[3 * 3 * i] = diagonal(6 * (pose_num + group_num) + 3 * i);
-        point_jacobian_square_[3 * 3 * i + 4] = diagonal(6 * (pose_num + group_num) + 3 * i + 1);
-        point_jacobian_square_[3 * 3 * i + 8] = diagonal(6 * (pose_num + group_num) + 3 * i + 2);
+        point_jacobian_square_[3 * 3 * i] = diagonal(6 * pose_num + 3 * i);
+        point_jacobian_square_[3 * 3 * i + 4] = diagonal(6 * pose_num + 3 * i + 1);
+        point_jacobian_square_[3 * 3 * i + 8] = diagonal(6 * pose_num + 3 * i + 2);
     }
 }
 
@@ -2346,36 +1627,6 @@ void BAProblem::SetPoseDiagonal(VecX const & diagonal)
     }
 }
 
-void BAProblem::GetIntrinsicDiagonal(VecX & diagonal) const
-{
-    size_t group_num = GroupNum();
-    diagonal.resize(6 * group_num);
-    for (size_t i = 0; i < group_num; i++)
-    {
-        diagonal(6 * i) = intrinsic_jacobian_square_[6 * 6 * i];
-        diagonal(6 * i + 1) = intrinsic_jacobian_square_[6 * 6 * i + 7];
-        diagonal(6 * i + 2) = intrinsic_jacobian_square_[6 * 6 * i + 14];
-        diagonal(6 * i + 3) = intrinsic_jacobian_square_[6 * 6 * i + 21];
-        diagonal(6 * i + 4) = intrinsic_jacobian_square_[6 * 6 * i + 28];
-        diagonal(6 * i + 5) = intrinsic_jacobian_square_[6 * 6 * i + 35];
-    }
-}
-
-void BAProblem::SetIntrinsicDiagonal(VecX const & diagonal)
-{
-    size_t group_num = GroupNum();
-    assert(group_num * 6 == diagonal.size() && "[SetIntrinsicDiagonal] Size disagrees");
-    for (size_t i = 0; i < group_num; i++)
-    {
-        intrinsic_jacobian_square_[6 * 6 * i] = diagonal(6 * i);
-        intrinsic_jacobian_square_[6 * 6 * i + 7] = diagonal(6 * i + 1);
-        intrinsic_jacobian_square_[6 * 6 * i + 14] = diagonal(6 * i + 2);
-        intrinsic_jacobian_square_[6 * 6 * i + 21] = diagonal(6 * i + 3);
-        intrinsic_jacobian_square_[6 * 6 * i + 28] = diagonal(6 * i + 4);
-        intrinsic_jacobian_square_[6 * 6 * i + 35] = diagonal(6 * i + 5);
-    }
-}
-
 void BAProblem::GetPointDiagonal(VecX & diagonal) const
 {
     size_t point_num = PointNum();
@@ -2405,15 +1656,10 @@ void BAProblem::Delete()
     if (residual_ != NULL)                              delete [] residual_;
     if (pose_jacobian_ != NULL)                         delete [] pose_jacobian_;
     if (point_jacobian_ != NULL)                        delete [] point_jacobian_;
-    if (intrinsic_jacobian_ != NULL)                    delete [] intrinsic_jacobian_;
     if (pose_jacobian_square_ != NULL)                  delete [] pose_jacobian_square_;
     if (point_jacobian_square_ != NULL)                 delete [] point_jacobian_square_;
-    if (intrinsic_jacobian_square_ != NULL)             delete [] intrinsic_jacobian_square_;
     if (pose_point_jacobian_product_ != NULL)           delete [] pose_point_jacobian_product_;
-    if (pose_intrinsic_jacobian_product_ != NULL)       delete [] pose_intrinsic_jacobian_product_;
-    if (intrinsic_point_jacobian_product_ != NULL)      delete [] intrinsic_point_jacobian_product_;
     if (pose_gradient_ != NULL)                         delete [] pose_gradient_;
-    if (intrinsic_gradient_ != NULL)                    delete [] intrinsic_gradient_;
     if (point_gradient_ != NULL)                        delete [] point_gradient_;
     if (Ec_Cinv_w_ != NULL)                              delete [] Ec_Cinv_w_;
 }
