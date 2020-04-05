@@ -91,7 +91,7 @@ void TestSTBA()
     SynthesizeBundleBlock(bundle_block);
 
     size_t max_cluster = 100;
-    StochasticBAProblem problem(1, 1e4, static_cast<LossType>(0), max_cluster, 4);
+    StochasticBAProblem problem(1, 1e4, static_cast<LossType>(0), max_cluster);
     problem.Initialize(bundle_block);
     problem.Solve();
     problem.Update(bundle_block);

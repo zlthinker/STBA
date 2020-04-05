@@ -11,22 +11,19 @@ public:
     StochasticBAProblem(size_t max_iter,
                         double radius,
                         LossType loss_type,
-                        size_t max_community,
-                        size_t inner_step);
+                        size_t max_community);
     StochasticBAProblem(size_t max_iter,
                         double radius,
                         LossType loss_type,
                         size_t max_community,
                         double temperature,
                         size_t batch_size,
-                        size_t inner_step,
                         bool complementary_clustering);
     StochasticBAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num);
     virtual ~StochasticBAProblem();
 
     inline void SetMaxCommunity(size_t val) { cluster_->SetMaxCommunity(val); }
     inline size_t GetMaxCommunity() const { return cluster_->GetMaxCommunity(); }
-    inline void SetInnerStep(size_t val) { inner_step_ = val; }
     inline void SetComplementaryClustering(bool val) { complementary_clustering_ = val; }
 
     virtual bool EvaluateCamera(DT const lambda);
@@ -55,9 +52,9 @@ private:
     double phi_;
     double connectivity_sample_ratio_; // sample ratio of camera connectivity
     // for inner iterations
-    size_t inner_step_;
     bool complementary_clustering_;
-    bool steepest_descent_correction_;
+    bool use_correction_;
+    bool use_inner_step_;
 };
 
 #endif // STOCHASTICBAPROBLEM_H
