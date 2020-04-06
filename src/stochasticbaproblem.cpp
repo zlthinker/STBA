@@ -1000,7 +1000,7 @@ void StochasticBAProblem::Print()
                  << status << std::left << std::setw(3) << iter_ << ", "
                  << "d: " << std::setw(width + 1) << delta_loss << ", "
                  << "F0: " << std::setw(width) << last_square_error_ << ", "
-                 << "F1: " << std::setw(width) << square_error_ << ", ""
+                 << "F1: " << std::setw(width) << square_error_ << ", "
                  << "g: " << std::setw(width) << max_gradient << ", "
                  << "mu: " << std::setw(width) << mu_ << ", "
                  << "h: " << std::setw(width) << step << ", "

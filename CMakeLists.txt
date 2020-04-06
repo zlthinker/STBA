@@ -23,3 +23,4 @@ set(SOURCES ${SOURCES} ${SUB_SOURCES})
 
 
 add_executable(STBA ${SOURCES})
+target_compile_definitions(STBA PUBLIC STBA_VERSION="0.0.0")

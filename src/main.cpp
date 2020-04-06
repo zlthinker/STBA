@@ -20,6 +20,7 @@ void PrintHelp()
 
 int main(int argc, char **argv)
 {
+    std::cout << "STBA version: " << STBA_VERSION << std::endl;
     if (argc < 5)
     {
         PrintHelp();
