@@ -17,14 +17,17 @@ This is a C++ implementation of "Stochastic Bundle Adjustment for Efficient and 
 
 
 
-
-
 ## Usage
 
 ### Requirements
 
 * Eigen3
 * OpenMP 
+
+### Code version
+
+This repository currently comprises two versions of codes ```0.0.0``` and ```1.0.0``` which go into the ```master``` and ```1.0.0``` branches, respectively.
+The ```0.0.0``` codes are based on the plain workflow of an Levenberg-Marquardt solver, while the ```1.0.0``` codes are based on the implementation suggested by [[1]Bundle Adjustment Rule](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.222.3253&rep=rep1&type=pdf) and are more computation and memory efficient. You can try different implementations by checking out different branches.
 
 ### Build
  
@@ -44,7 +47,7 @@ This is a C++ implementation of "Stochastic Bundle Adjustment for Efficient and 
 * Run ```./STBA --help``` to see more options.
 	* `--iteration`: Set the maximum number of iterations.
 	* `--cluster`: A STBA option which sets the maximum cluster size for stochastic graph clustering.
-	* `--inner_step`: A STBA option which sets the number of iterative step corrections.
+	* `--inner_step`: A STBA option which sets the number of inner iterative steps.
 	* `--thread_num`: Set thread number for OpenMP parallel computing.
 	* `--radius`: Set the initial radius of trust region for the trust region solvers.
 	* `--loss`: Set the type of robust loss function. Currently, `Huber` and `Cauchy` loss functions are supported.
@@ -59,3 +62,7 @@ This is a C++ implementation of "Stochastic Bundle Adjustment for Efficient and 
 ## Credit
 
 This implementation was developed by [Lei Zhou](https://zlthinker.github.io/). Feel free to contact Lei for any enquiry.
+
+## Reference
+
+[1] Engels, Chris, Henrik Stewénius, and David Nistér. "Bundle Adjustment Rules." Photogrammetric computer vision, 2(2006).
