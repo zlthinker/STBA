@@ -686,9 +686,7 @@ void BAProblem::EvaluateResidual()
     ClearResidual();
     size_t proj_num = projection_block_.ProjectionNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < proj_num; i++)
     {
         size_t pose_index = projection_block_.PoseIndex(i);
@@ -751,9 +749,7 @@ void BAProblem::ReprojectionError(double & mean, double & median, double & max, 
     assert(proj_num > 0 && "[ReprojectionError] Empty projection");
     std::vector<double> errors(proj_num, 0.0);
 
-#ifdef OPENMP
-#pragma omp parallel for
-#endif
+    #pragma omp parallel for
     for (size_t i = 0; i < proj_num; i++)
     {
         Vec2 projection;
@@ -803,9 +799,7 @@ double BAProblem::EvaluateSquareError(bool const update) const
     assert(proj_num > 0 && "[EvaluateSquareError] Empty projection");
     double error = 0;
 
-#ifdef OPENMP
 #pragma omp parallel for reduction(+:error)
-#endif
     for (size_t i = 0; i < proj_num; i++)
     {
         Vec2 projection;
@@ -843,9 +837,7 @@ void BAProblem::EvaluateJacobian()
     ClearPointJacobian();
     size_t proj_num = projection_block_.ProjectionNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t j = 0; j < proj_num; j++)
     {
         // Multiply a factor for robustfication
@@ -910,9 +902,7 @@ void BAProblem::EvaluateJcJc()
 {
     ClearJcJc();
     size_t pose_num = pose_block_.PoseNum();
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < pose_num; i++)
     {
         Mat6 jcjc;
@@ -951,9 +941,7 @@ void BAProblem::EvaluateJpJp()
 {
     ClearJpJp();
     size_t point_num = point_block_.PointNum();
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < point_num; i++)
     {
         Mat3 jpjp;
@@ -986,9 +974,7 @@ void BAProblem::EvaluateJcJp()
     ClearJcJp();
     size_t proj_num = projection_block_.ProjectionNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < proj_num; i++)
     {
         Mat63 JcJp;
@@ -1037,9 +1023,7 @@ void BAProblem::EvaluateJce()
     ClearJce();
     size_t pose_num = pose_block_.PoseNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < pose_num; i++)
     {
         Vec6 local_Jce;
@@ -1087,9 +1071,7 @@ void BAProblem::EvaluateJpe()
 {
     ClearJpe();
     size_t point_num = point_block_.PointNum();
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < point_num; i++)
     {
         Vec3 local_Jpe;
@@ -1199,6 +1181,8 @@ void BAProblem::EvaluateEcEc(MatX & EcEc) const
     EcEc = MatX::Zero(pose_num * 6, pose_num * 6);
 
     size_t point_num = PointNum();
+
+    #pragma omp parallel for
     for (size_t i = 0; i < point_num; i++)
     {
         std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(i);
@@ -1312,9 +1296,7 @@ void BAProblem::EvaluateEcw()
     ClearECw();
 
     size_t pose_num = PoseNum();
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < pose_num; i++)
     {
         Vec6 local_Ecw;

@@ -111,6 +111,139 @@ void LMBAProblem::Solve()
     stream_ << "[Setting] Levenberg Marquardt\n";
 }
 
+<<<<<<< HEAD
+=======
+
+/*!
+    EvaluateResidual();
+    EvaluateJacobian();
+    EvaluateJcJc();
+    EvaluateJpJp();
+    EvaluateJcJp();
+    EvaluateJce();
+    EvaluateJpe();
+    EvaluateJiJi();
+    EvaluateJcJi();
+    EvaluateJiJp();
+    EvaluateJie();
+ */
+void LMBAProblem::Evaluate()
+{
+    ClearResidual();
+    ClearPoseJacobian();
+    ClearPointJacobian();
+    ClearIntrinsicJacobian();
+    ClearJcJp();
+    ClearJcJc();
+    ClearJpJp();
+    ClearJce();
+    ClearJpe();
+    if (!fix_intrinsic_)
+    {
+        ClearJcJi();
+        ClearJiJp();
+        ClearJie();
+        ClearJiJi();
+    }
+    size_t proj_num = projection_block_.ProjectionNum();
+
+#pragma omp parallel for
+    for (size_t i = 0; i < proj_num; i++)
+    {
+        size_t pose_index = projection_block_.PoseIndex(i);
+        size_t point_index = projection_block_.PointIndex(i);
+        size_t group_index = GetPoseGroup(pose_index);
+        Vec3 angle_axis, translation, point;
+        Vec6 intrinsic;
+        pose_block_.GetPose(pose_index, angle_axis, translation);
+        point_block_.GetPoint(point_index, point);
+        GetPoseIntrinsic(pose_index, intrinsic);
+
+        Vec2 projection, reprojection, reprojection_error;
+        projection_block_.GetProjection(i, projection);
+        if (!Project(intrinsic(0), intrinsic(1), intrinsic(2), angle_axis, translation, point, intrinsic.tail<3>(), reprojection))
+            continue;
+        reprojection_error = reprojection - projection;
+
+        // EvaluateResidual();
+        Vec2 residual = reprojection_error;
+        loss_function_->CorrectResiduals(residual);
+        SetResidual(i, residual);
+
+        // EvaluateJacobian();
+        Mat23 jacobian_rotation;
+        Mat23 jacobian_translation;
+        Mat23 jacobian_point;
+        Mat26 jacobian_intrinsic;
+        ProjectAndGradient(angle_axis, translation, point, intrinsic(0), intrinsic(1), intrinsic(2), intrinsic.tail<3>(),
+                           projection, jacobian_rotation, jacobian_translation, jacobian_point, jacobian_intrinsic);
+
+        loss_function_->CorrectJacobian<2, 3>(reprojection_error, jacobian_rotation);
+        loss_function_->CorrectJacobian<2, 3>(reprojection_error, jacobian_translation);
+        loss_function_->CorrectJacobian<2, 3>(reprojection_error, jacobian_point);
+        loss_function_->CorrectJacobian<2, 6>(reprojection_error, jacobian_intrinsic);
+        SetPoseJacobian(i, jacobian_rotation, jacobian_translation);
+        SetPointJacobian(i, jacobian_point);
+        if (!fix_intrinsic_)
+            SetIntrinsicJacobian(i, jacobian_intrinsic);
+
+        // EvaluateJcJp();
+        Mat26 Jc;
+        Jc << jacobian_rotation, jacobian_translation;
+        Mat63 JcJp = Jc.transpose() * jacobian_point;
+        SetJcJp(i, JcJp);
+
+        // EvaluateJcJc();
+        Mat6 JcJc = Jc.transpose() * Jc;
+
+        // EvaluateJpJp();
+        Mat3 JpJp = jacobian_point.transpose() * jacobian_point;
+
+        // EvaluateJce();
+        Vec6 Jce = Jc.transpose() * residual;
+
+        // EvaluateJpe();
+        Vec3 Jpe = jacobian_point.transpose() * residual;
+
+        Mat6 JiJi, JcJi;
+        Mat63 JiJp;
+        Vec6 Jie;
+        if (!fix_intrinsic_)
+        {
+            // EvaluateJiJi();
+            JiJi = jacobian_intrinsic.transpose() * jacobian_intrinsic;
+
+            // EvaluateJcJi();
+            JcJi = Jc.transpose() * jacobian_intrinsic;
+
+            // EvaluateJiJp();
+            JiJp = jacobian_intrinsic.transpose() * jacobian_point;
+
+            // EvaluateJie();
+            Jie = jacobian_intrinsic.transpose() * residual;
+        }
+
+        #pragma omp critical
+        {
+            IncreJcJc(pose_index, JcJc);
+            IncreJpJp(point_index, JpJp);
+            IncreJce(pose_index, Jce);
+            IncreJpe(point_index, Jpe);
+            if (!fix_intrinsic_)
+            {
+                IncreJiJi(group_index, JiJi);
+                IncreJcJi(pose_index, JcJi);
+                IncreJiJp(group_index, point_index, JiJp);
+                IncreJie(group_index, Jie);
+            }
+        }
+
+
+    }
+
+}
+
+>>>>>>> ef7a17437d05edf721bda3bc25e521a5200fdd03
 /*!
  * @brief Decrease step radius (more conservative) when step rejected
  */
@@ -286,6 +419,23 @@ void LMBAProblem::ResetPoseDiagonal()
      SetPoseDiagonal(pose_diagonal_);
 }
 
+<<<<<<< HEAD
+=======
+void LMBAProblem::AugmentIntrinsicDiagonal()
+{
+    if (fix_intrinsic_) return;
+    GetIntrinsicDiagonal(intrinsic_diagonal_);
+    VecX aug_intrinsic_diagonal = intrinsic_diagonal_ / mu_;
+    SetIntrinsicDiagonal(intrinsic_diagonal_ + aug_intrinsic_diagonal);
+}
+
+void LMBAProblem::ResetIntrinsicDiagonal()
+{
+    if (fix_intrinsic_) return;
+    SetIntrinsicDiagonal(intrinsic_diagonal_);
+}
+
+>>>>>>> ef7a17437d05edf721bda3bc25e521a5200fdd03
 void LMBAProblem::AugmentPointDiagonal()
 {
     GetPointDiagonal(point_diagonal_);

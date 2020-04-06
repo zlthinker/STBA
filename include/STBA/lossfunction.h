@@ -13,6 +13,7 @@ class LossFunction
 public:
     LossFunction() : a_(1.0), b_(1.0) {}
     LossFunction(DT a) : a_(a), b_(a * a) {}
+    virtual ~LossFunction() {}
 public:
     virtual DT Loss(DT) const = 0;
     virtual DT FirstOrderDerivative(DT error) const = 0;
