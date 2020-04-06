@@ -17,14 +17,17 @@ This is a C++ implementation of "Stochastic Bundle Adjustment for Efficient and 
 
 
 
-
-
 ## Usage
 
 ### Requirements
 
 * Eigen3
 * OpenMP 
+
+### Code version
+
+This repository currently comprises two versions of codes ```0.0.0``` and ```1.0.0``` which go into the ```master``` and ```1.0.0``` branches, respectively.
+The ```0.0.0``` codes are based on the plain workflow of an Levenberg-Marquardt solver, while the ```1.0.0``` codes are based on the implementation suggested by [Bundle Adjustment Rule](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.222.3253&rep=rep1&type=pdf) and are more computation and memory efficient. You can try different implementations by checking out different branches.
 
 ### Build
  
