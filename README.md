@@ -44,7 +44,7 @@ This is a C++ implementation of "Stochastic Bundle Adjustment for Efficient and 
 * Run ```./STBA --help``` to see more options.
 	* `--iteration`: Set the maximum number of iterations.
 	* `--cluster`: A STBA option which sets the maximum cluster size for stochastic graph clustering.
-	* `--inner_step`: A STBA option which sets the number of iterative step corrections.
+	* `--inner_step`: A STBA option which sets the number of inner iterative steps.
 	* `--thread_num`: Set thread number for OpenMP parallel computing.
 	* `--radius`: Set the initial radius of trust region for the trust region solvers.
 	* `--loss`: Set the type of robust loss function. Currently, `Huber` and `Cauchy` loss functions are supported.
