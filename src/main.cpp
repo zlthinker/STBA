@@ -9,6 +9,7 @@ void PrintHelp()
     std::cout << "Usage: <exe> <cameras.txt> <images.txt> <points.txt> <output_folder>\n"
               << "--iteration <val> : Set maximum iteration, default val = 100 \n"
               << "--cluster <val> : Set maximum cluster size, default val = 100 \n"
+              << "--inner_step <val> : Set number of correction steps, default val = 4 \n"
               << "--thread_num <val> : Set thread number, default val = 1 \n"
               << "--radius <val> : Set intial radius of trust region, default val = 10000 \n"
               << "--loss <val> : Set loss type (0 - NULL, 1 - Huber, 2 - Cauchy), default val = 2 \n"
@@ -40,6 +41,7 @@ int main(int argc, char **argv)
 
     size_t iteration = 100;
     size_t cluster = 100;
+    size_t inner_step = 4;
     size_t thread_num = 1;
     double radius = 10000;
     LossType loss_type = CauchyLossType;
@@ -70,6 +72,16 @@ int main(int argc, char **argv)
                 return -1;
             }
             cluster = static_cast<size_t>(std::stoi(argv[i]));
+        }
+        else if (option == "--inner_step")
+        {
+            i++;
+            if (i >= argc)
+            {
+                PrintHelp();
+                return -1;
+            }
+            inner_step = static_cast<size_t>(std::stoi(argv[i]));
         }
         else if (option == "--thread_num")
         {
@@ -146,6 +158,7 @@ int main(int argc, char **argv)
               << output_folder << "\n"
               << "iteration = " << iteration << "\n"
               << "cluster = " << cluster << "\n"
+              << "inner_step = " << inner_step << "\n"
               << "thread_num = " << thread_num << "\n"
               << "radius = " << radius << "\n"
               << "loss_type = " << loss_type << "\n"
@@ -172,7 +185,7 @@ int main(int argc, char **argv)
     }
     else
     {
-        problem = new StochasticBAProblem(iteration, radius, loss_type, cluster);
+        problem = new StochasticBAProblem(iteration, radius, loss_type, cluster, inner_step);
     }
     problem->SetThreadNum(thread_num);
     problem->SetIntrinsicFixed(true);

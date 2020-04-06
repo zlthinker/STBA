@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-StochasticBAProblem::StochasticBAProblem() : LMBAProblem(), cluster_(NULL), complementary_clustering_(true)
+StochasticBAProblem::StochasticBAProblem() : LMBAProblem(), cluster_(NULL), complementary_clustering_(true), inner_step_(4)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(100);
@@ -13,8 +13,9 @@ StochasticBAProblem::StochasticBAProblem() : LMBAProblem(), cluster_(NULL), comp
 StochasticBAProblem::StochasticBAProblem(size_t max_iter,
                                          double radius,
                                          LossType loss_type,
-                                         size_t max_community)
-    : LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), complementary_clustering_(true)
+                                         size_t max_community,
+                                         size_t inner_step)
+    : LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), complementary_clustering_(true), inner_step_(inner_step)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(max_community);
@@ -29,7 +30,7 @@ StochasticBAProblem::StochasticBAProblem(size_t max_iter,
                                          double temperature,
                                          size_t batch_size,
                                          bool complementary_clustering)
-    : LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), complementary_clustering_(complementary_clustering)
+    : LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), complementary_clustering_(complementary_clustering), inner_step_(4)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(max_community);
@@ -37,7 +38,7 @@ StochasticBAProblem::StochasticBAProblem(size_t max_iter,
     SetIntrinsicFixed(true);
 }
 
-StochasticBAProblem::StochasticBAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num) : LMBAProblem(pose_num, group_num, point_num, proj_num), cluster_(NULL)
+StochasticBAProblem::StochasticBAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num) : LMBAProblem(pose_num, group_num, point_num, proj_num), cluster_(NULL), inner_step_(4)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(100);
@@ -233,8 +234,7 @@ void StochasticBAProblem::Print()
                  << std::setprecision(3) << std::fixed
                  << "me: " << std::setw(6) << median_error << ", "
                  << "ae: " << std::setw(6) << mean_error << ", "
-                 << "In: " << std::setw(1) << use_inner_step_ << ", "
-                 << "Corr: " << std::setw(1) << use_correction_ << ", "
+                 << "In: " << std::setw(2) << inner_step_ << ", "
                  << "#C: " << std::setw(4) << clusters.size() << ", "
                  << "Q: " << std::setw(5) << modualarity << ", "
                  << "s: " << std::setw(5) << connectivity_sample_ratio_ << ", "
@@ -287,9 +287,6 @@ void StochasticBAProblem::SamplingControl()
 
 bool StochasticBAProblem::EvaluateCamera(DT const lambda)
 {
-    use_inner_step_ = false;
-    use_correction_ = (lambda <= 1.0);
-
     size_t const track_num = PointNum();
     size_t const pose_num = PoseNum();
 
@@ -298,7 +295,7 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
     MatX full_A;
     VecX full_intercept;
     std::vector<Mat6> pose_diagonals;
-    if (use_inner_step_)
+    if (inner_step_ > 0)
     {
         full_A = MatX::Zero(6 * pose_num, 6 * pose_num);
         full_intercept = VecX::Zero(6 * pose_num);
@@ -374,7 +371,7 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
             Mat6 Hcc = pose_jacobian.transpose() * pose_jacobian;
             Vec6 pose_gradient = -pose_jacobian.transpose() * residual;
 
-            if (use_inner_step_)
+            if (inner_step_ > 0)
             {
                 full_A.block(pose_index * 6, pose_index * 6, 6, 6) += Hcc;
                 full_intercept.segment(pose_index * 6, 6) += pose_gradient;
@@ -408,7 +405,7 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
             Hpp_map_inv.insert(std::make_pair(cluster_index, InverseMat(Hpp_c)));
         }
 
-        if (use_correction_)
+        if (lambda >= 1.0)
             SteepestDescentCorrection(Hpp_map, bp_map);
 
         for (size_t pidx = 0; pidx < projection_pairs.size(); pidx++)
@@ -417,7 +414,7 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
             size_t cluster_index = pose_cluster_map[pose_index];
             size_t pose_local_index = pose_local_map[pose_index];
             size_t projection_index = projection_pairs[pidx].second;
-            if (use_inner_step_)
+            if (inner_step_ > 0)
             {
                 full_intercept.segment(pose_index * 6, 6) -= Hcp[pidx] * tp;
             }
@@ -436,7 +433,7 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
                 size_t pose_index2 = projection_pairs[pidx2].first;
                 size_t cluster_index2 = pose_cluster_map[pose_index2];
 
-                if (use_inner_step_ && pose_index <= pose_index2)
+                if (inner_step_ > 0 && pose_index <= pose_index2)
                 {
                     Mat6 Hcc2 = Tcp * Hcp[pidx2].transpose();
                     full_A.block(pose_index * 6, pose_index2 * 6, 6, 6) -= Hcc2;
@@ -478,7 +475,7 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
     if (sum_broken != 0)
         return false;
 
-    if (use_inner_step_)
+    if (inner_step_ > 0)
     {
         std::vector<Mat6> pose_diagonals_inv;
         pose_diagonals_inv.resize(pose_num);
@@ -492,7 +489,7 @@ bool StochasticBAProblem::EvaluateCamera(DT const lambda)
         }
         VecX delta_pose;
         GetPoseUpdate(delta_pose);
-        for (size_t i = 0; i < 4; i++)
+        for (size_t i = 0; i < inner_step_; i++)
         {
             VecX delta_intercept = full_intercept - full_A * delta_pose; 
             for (size_t pidx = 0; pidx < pose_num; pidx++)

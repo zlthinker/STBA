@@ -11,7 +11,8 @@ public:
     StochasticBAProblem(size_t max_iter,
                         double radius,
                         LossType loss_type,
-                        size_t max_community);
+                        size_t max_community,
+                        size_t inner_step);
     StochasticBAProblem(size_t max_iter,
                         double radius,
                         LossType loss_type,
@@ -51,10 +52,8 @@ private:
     double R_square_;
     double phi_;
     double connectivity_sample_ratio_; // sample ratio of camera connectivity
-    // for inner iterations
     bool complementary_clustering_;
-    bool use_correction_;
-    bool use_inner_step_;
+    size_t inner_step_;
 };
 
 #endif // STOCHASTICBAPROBLEM_H
