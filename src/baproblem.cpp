@@ -196,7 +196,7 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block)
                 point_index_set.insert(point_index);
             }
             std::vector<size_t> common_point_indexes(point_index_set.begin(), point_index_set.end());
-            SetCommonPoints(pose_index1, pose_index2, point_icommon_point_indexesndexes);
+            SetCommonPoints(pose_index1, pose_index2, common_point_indexes);
         }
     }
 
