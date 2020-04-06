@@ -70,8 +70,7 @@ bool BAProblem::Create(size_t pose_num, size_t group_num, size_t point_num, size
 {
     DT memory = pose_num * 12 + group_num * 12 + point_num * 6 + proj_num * 2 +
             proj_num * 2 + proj_num * 12 + proj_num * 6 + pose_num * 36 + point_num * 9 +
-            proj_num * 18 + pose_num * 6 + point_num * 3 + pose_num * 6 +
-            group_num * 6 + proj_num * 12 + group_num * 36 + pose_num * 36 + group_num * point_num * 18 + group_num * 6;
+            proj_num * 18 + pose_num * 6 + point_num * 3 + pose_num * 6;
     memory = memory * 4 / (1024 * 1024 * 1024);  // kB
     std::cout << "[BAProblem::Create] A memory of " << memory << " GB is going to be allocated.\n";
 

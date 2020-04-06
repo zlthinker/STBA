@@ -15,7 +15,7 @@ StochasticBAProblem::StochasticBAProblem(size_t max_iter,
                                          LossType loss_type,
                                          size_t max_community,
                                          size_t inner_step)
-    :LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), batch_size_(1), inner_step_(inner_step), complementary_clustering_(true)
+    : LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), batch_size_(1), inner_step_(inner_step), complementary_clustering_(true)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(max_community);
@@ -30,15 +30,14 @@ StochasticBAProblem::StochasticBAProblem(size_t max_iter,
                                          size_t batch_size,
                                          size_t inner_step,
                                          bool complementary_clustering)
-    :LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), batch_size_(batch_size), inner_step_(inner_step), complementary_clustering_(complementary_clustering)
+    : LMBAProblem(max_iter, radius, loss_type), cluster_(NULL), batch_size_(batch_size), inner_step_(inner_step), complementary_clustering_(complementary_clustering)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(max_community);
     cluster_->SetTemperature(temperature);
 }
 
-StochasticBAProblem::StochasticBAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num) :
-    LMBAProblem(pose_num, group_num, point_num, proj_num), cluster_(NULL), batch_size_(1), inner_step_(0)
+StochasticBAProblem::StochasticBAProblem(size_t pose_num, size_t group_num, size_t point_num, size_t proj_num) : LMBAProblem(pose_num, group_num, point_num, proj_num), cluster_(NULL), batch_size_(1), inner_step_(0)
 {
     cluster_ = new Louvain();
     cluster_->SetMaxCommunity(100);
@@ -46,7 +45,8 @@ StochasticBAProblem::StochasticBAProblem(size_t pose_num, size_t group_num, size
 
 StochasticBAProblem::~StochasticBAProblem()
 {
-    if (cluster_ != NULL)   delete cluster_;
+    if (cluster_ != NULL)
+        delete cluster_;
 }
 
 void StochasticBAProblem::Solve()
@@ -69,7 +69,6 @@ void StochasticBAProblem::Solve()
     time_ = std::chrono::system_clock::now();
     for (iter_ = 0; iter_ < max_iteration_; iter_++)
     {
-        SamplingControl();
         ClearUpdate();
         if (evaluate_)
         {
@@ -89,8 +88,7 @@ void StochasticBAProblem::Solve()
         {
             EvaluateDeltaPoint();
             square_error_ = EvaluateSquareError(true);
-            if (StopCriterionGradient() || StopCriterionUpdate()
-                    || StopCriterionRadius() || StopCriterionRelativeCostChange())
+            if (StopCriterionGradient() || StopCriterionUpdate() || StopCriterionRadius() || StopCriterionRelativeCostChange())
                 break;
             step_accept_ = StepAccept();
         }
@@ -100,7 +98,7 @@ void StochasticBAProblem::Solve()
             step_accept_ = false;
         }
 
-        if (step_accept_)      // accept, descrease lambda
+        if (step_accept_) // accept, descrease lambda
         {
             Print();
             IncreaseRadius();
@@ -108,7 +106,7 @@ void StochasticBAProblem::Solve()
             UpdateParam();
             evaluate_ = true;
         }
-        else                                                      // reject, increase lambda
+        else // reject, increase lambda
         {
             Print();
             DecreaseRadius();
@@ -146,7 +144,7 @@ size_t StochasticBAProblem::GetPointLocalCluster(size_t point_index, size_t clus
 {
     size_t local_point_cluster;
     bool found = false;
-    std::vector<size_t> const & point_clusters = point_cluster_map_[point_index];
+    std::vector<size_t> const &point_clusters = point_cluster_map_[point_index];
     for (size_t j = 0; j < point_clusters.size(); j++)
     {
         if (point_clusters[j] == cluster_index)
@@ -160,12 +158,12 @@ size_t StochasticBAProblem::GetPointLocalCluster(size_t point_index, size_t clus
     return local_point_cluster;
 }
 
-size_t StochasticBAProblem::GetPointClusters(size_t point_index, std::vector<size_t> & cluster_indexes) const
+size_t StochasticBAProblem::GetPointClusters(size_t point_index, std::vector<size_t> &cluster_indexes) const
 {
     std::unordered_set<size_t> cluster_set;
-    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(point_index);
+    std::unordered_map<size_t, std::unordered_map<size_t, size_t>>::const_iterator it1 = point_projection_map_.find(point_index);
     assert(it1 != point_projection_map_.end() && "[GetPointClusters] Point index not found");
-    std::unordered_map<size_t, size_t> const & map = it1->second;
+    std::unordered_map<size_t, size_t> const &map = it1->second;
     std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
     for (; it2 != map.end(); it2++)
     {
@@ -179,7 +177,7 @@ size_t StochasticBAProblem::GetPointClusters(size_t point_index, std::vector<siz
 
 void StochasticBAProblem::AugmentPointDiagonal()
 {
-    std::vector<std::vector<Vec3> >  aug_point_diagonal;
+    std::vector<std::vector<Vec3>> aug_point_diagonal;
     GetPointDiagonal(cluster_point_diagonal_);
     aug_point_diagonal = cluster_point_diagonal_;
     GetPointAugDiagonal(aug_point_diagonal);
@@ -191,45 +189,45 @@ void StochasticBAProblem::ResetPointDiagonal()
     SetPointDiagonal(cluster_point_diagonal_);
 }
 
-void StochasticBAProblem::GetJpJp(size_t point_index, size_t local_cluster_index, Mat3 & JpJp) const
+void StochasticBAProblem::GetJpJp(size_t point_index, size_t local_cluster_index, Mat3 &JpJp) const
 {
     assert(point_index < PointNum() && "[GetJpJp] Point index out of range");
-    PointMeta const * point_ = point_meta_[point_index];
+    PointMeta const *point_ = point_meta_[point_index];
     point_->GetJpJp(local_cluster_index, JpJp);
 }
 
-void StochasticBAProblem::SetJpJp(size_t point_index, size_t local_cluster_index, Mat3 const & JpJp)
+void StochasticBAProblem::SetJpJp(size_t point_index, size_t local_cluster_index, Mat3 const &JpJp)
 {
     assert(point_index < PointNum() && "[SetJpJp] Point index out of range");
-    PointMeta * point_ = point_meta_[point_index];
+    PointMeta *point_ = point_meta_[point_index];
     point_->SetJpJp(local_cluster_index, JpJp);
 }
 
-void StochasticBAProblem::GetJpe(size_t point_index, size_t local_cluster_index, Vec3 & Jpe) const
+void StochasticBAProblem::GetJpe(size_t point_index, size_t local_cluster_index, Vec3 &Jpe) const
 {
     assert(point_index < PointNum() && "[GetJpe] Point index out of range");
-    PointMeta const * point_ = point_meta_[point_index];
+    PointMeta const *point_ = point_meta_[point_index];
     point_->GetJpe(local_cluster_index, Jpe);
 }
 
-void StochasticBAProblem::SetJpe(size_t point_index, size_t local_cluster_index, Vec3 const & Jpe)
+void StochasticBAProblem::SetJpe(size_t point_index, size_t local_cluster_index, Vec3 const &Jpe)
 {
     assert(point_index < PointNum() && "[SetJpe] Point index out of range");
-    PointMeta * point_ = point_meta_[point_index];
+    PointMeta *point_ = point_meta_[point_index];
     point_->SetJpe(local_cluster_index, Jpe);
 }
 
-void StochasticBAProblem::GetDeltaPoint(size_t point_index, size_t local_cluster_index, Vec3 & dz) const
+void StochasticBAProblem::GetDeltaPoint(size_t point_index, size_t local_cluster_index, Vec3 &dz) const
 {
     assert(point_index < PointNum() && "[Getdz] Point index out of range");
-    PointMeta const * point_ = point_meta_[point_index];
+    PointMeta const *point_ = point_meta_[point_index];
     point_->GetDeltaPoint(local_cluster_index, dz);
 }
 
-void StochasticBAProblem::SetDeltaPoint(size_t point_index, size_t local_cluster_index, Vec3 const & dz)
+void StochasticBAProblem::SetDeltaPoint(size_t point_index, size_t local_cluster_index, Vec3 const &dz)
 {
     assert(point_index < PointNum() && "[Setdz] Point index out of range");
-    PointMeta * point_ = point_meta_[point_index];
+    PointMeta *point_ = point_meta_[point_index];
     point_->SetDeltaPoint(local_cluster_index, dz);
 }
 
@@ -238,22 +236,22 @@ void StochasticBAProblem::ClearPointMeta()
     size_t point_num = point_meta_.size();
     for (size_t i = 0; i < point_num; i++)
     {
-        PointMeta * ptr = point_meta_[i];
+        PointMeta *ptr = point_meta_[i];
         if (ptr != NULL)
             delete ptr;
     }
     point_meta_.clear();
 }
 
-void StochasticBAProblem::GetPointDiagonal(std::vector<std::vector<Vec3> > & point_diagonal) const
+void StochasticBAProblem::GetPointDiagonal(std::vector<std::vector<Vec3>> &point_diagonal) const
 {
     size_t point_num = PointNum();
     point_diagonal.resize(point_num);
     for (size_t i = 0; i < point_num; i++)
     {
-        PointMeta const * point_ = point_meta_[i];
-        std::vector<size_t> const & clusters = point_cluster_map_[i];
-        std::vector<Vec3> & cluster_diagonal = point_diagonal[i];
+        PointMeta const *point_ = point_meta_[i];
+        std::vector<size_t> const &clusters = point_cluster_map_[i];
+        std::vector<Vec3> &cluster_diagonal = point_diagonal[i];
         cluster_diagonal.resize(clusters.size());
         for (size_t j = 0; j < clusters.size(); j++)
         {
@@ -264,27 +262,27 @@ void StochasticBAProblem::GetPointDiagonal(std::vector<std::vector<Vec3> > & poi
     }
 }
 
-void StochasticBAProblem::GetPointAugDiagonal(std::vector<std::vector<Vec3> > & aug_point_diagonal) const
+void StochasticBAProblem::GetPointAugDiagonal(std::vector<std::vector<Vec3>> &aug_point_diagonal) const
 {
     size_t point_num = PointNum();
     for (size_t i = 0; i < point_num; i++)
     {
-        std::vector<Vec3> & diagonals = aug_point_diagonal[i];
+        std::vector<Vec3> &diagonals = aug_point_diagonal[i];
         for (size_t j = 0; j < diagonals.size(); j++)
         {
-            Vec3 & diagonal = diagonals[j];
+            Vec3 &diagonal = diagonals[j];
             diagonal = diagonal / mu_;
         }
     }
 }
 
-void StochasticBAProblem::AddPointDiagonal(std::vector<std::vector<Vec3> > const & aug_point_diagonal)
+void StochasticBAProblem::AddPointDiagonal(std::vector<std::vector<Vec3>> const &aug_point_diagonal)
 {
     size_t point_num = PointNum();
     for (size_t i = 0; i < point_num; i++)
     {
-        PointMeta * point_ = point_meta_[i];
-        std::vector<Vec3> const & diagonals = aug_point_diagonal[i];
+        PointMeta *point_ = point_meta_[i];
+        std::vector<Vec3> const &diagonals = aug_point_diagonal[i];
         for (size_t j = 0; j < diagonals.size(); j++)
         {
             Vec3 diagonal = diagonals[j];
@@ -293,13 +291,13 @@ void StochasticBAProblem::AddPointDiagonal(std::vector<std::vector<Vec3> > const
     }
 }
 
-void StochasticBAProblem::SetPointDiagonal(std::vector<std::vector<Vec3> > const & point_diagonal)
+void StochasticBAProblem::SetPointDiagonal(std::vector<std::vector<Vec3>> const &point_diagonal)
 {
     size_t point_num = PointNum();
     for (size_t i = 0; i < point_num; i++)
     {
-        PointMeta * point_ = point_meta_[i];
-        std::vector<Vec3> const & diagonals = point_diagonal[i];
+        PointMeta *point_ = point_meta_[i];
+        std::vector<Vec3> const &diagonals = point_diagonal[i];
         for (size_t j = 0; j < diagonals.size(); j++)
         {
             Vec3 diagonal = diagonals[j];
@@ -308,18 +306,19 @@ void StochasticBAProblem::SetPointDiagonal(std::vector<std::vector<Vec3> > const
     }
 }
 
-void StochasticBAProblem::EvaluateJpJp(size_t point_index, size_t cluster_index, Mat3 & JpJp) const
+void StochasticBAProblem::EvaluateJpJp(size_t point_index, size_t cluster_index, Mat3 &JpJp) const
 {
     JpJp = Mat3::Zero();
-    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(point_index);
+    std::unordered_map<size_t, std::unordered_map<size_t, size_t>>::const_iterator it1 = point_projection_map_.find(point_index);
     assert(it1 != point_projection_map_.end() && "[GetJpJp] Point index not found");
-    std::unordered_map<size_t, size_t> const & map = it1->second;
+    std::unordered_map<size_t, size_t> const &map = it1->second;
     std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
     for (; it2 != map.end(); it2++)
     {
         size_t pose_index = it2->first;
         size_t local_cluster_index = GetPoseCluster(pose_index);
-        if (cluster_index != local_cluster_index)   continue;
+        if (cluster_index != local_cluster_index)
+            continue;
         size_t proj_index = it2->second;
         Mat23 jacobian;
         GetPointJacobian(proj_index, jacobian);
@@ -331,12 +330,10 @@ void StochasticBAProblem::EvaluateJpJp()
 {
     size_t point_num = point_block_.PointNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < point_num; i++)
     {
-        std::vector<size_t> const & cluster_indexes = point_cluster_map_[i];
+        std::vector<size_t> const &cluster_indexes = point_cluster_map_[i];
         for (size_t j = 0; j < cluster_indexes.size(); j++)
         {
             size_t cluster_index = cluster_indexes[j];
@@ -347,18 +344,19 @@ void StochasticBAProblem::EvaluateJpJp()
     }
 }
 
-void StochasticBAProblem::EvaluateJpe(size_t point_index, size_t cluster_index, Vec3 & Jpe) const
+void StochasticBAProblem::EvaluateJpe(size_t point_index, size_t cluster_index, Vec3 &Jpe) const
 {
     Jpe = Vec3::Zero();
-    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(point_index);
+    std::unordered_map<size_t, std::unordered_map<size_t, size_t>>::const_iterator it1 = point_projection_map_.find(point_index);
     assert(it1 != point_projection_map_.end() && "[GetJpe] Point index not found");
-    std::unordered_map<size_t, size_t> const & map = it1->second;
+    std::unordered_map<size_t, size_t> const &map = it1->second;
     std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
     for (; it2 != map.end(); it2++)
     {
         size_t pose_index = it2->first;
         size_t local_cluster_index = GetPoseCluster(pose_index);
-        if (cluster_index != local_cluster_index)   continue;
+        if (cluster_index != local_cluster_index)
+            continue;
 
         size_t proj_index = it2->second;
         Mat23 point_jacobian;
@@ -374,12 +372,10 @@ void StochasticBAProblem::EvaluateJpe()
 {
     size_t point_num = point_block_.PointNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < point_num; i++)
     {
-        std::vector<size_t> const & cluster_indexes = point_cluster_map_[i];
+        std::vector<size_t> const &cluster_indexes = point_cluster_map_[i];
         for (size_t j = 0; j < cluster_indexes.size(); j++)
         {
             size_t cluster_index = cluster_indexes[j];
@@ -390,12 +386,13 @@ void StochasticBAProblem::EvaluateJpe()
     }
 }
 
-bool StochasticBAProblem::EvaluateEcEc(size_t pose_index1, size_t pose_index2, Mat6 & EcEc) const
+bool StochasticBAProblem::EvaluateEcEc(size_t pose_index1, size_t pose_index2, Mat6 &EcEc) const
 {
     EcEc.setZero();
     std::vector<size_t> points;
     GetCommonPoints(pose_index1, pose_index2, points);
-    if (points.empty()) return false;
+    if (points.empty())
+        return false;
 
     size_t cluster_index1 = GetPoseCluster(pose_index1);
     size_t cluster_index2 = GetPoseCluster(pose_index2);
@@ -418,12 +415,13 @@ bool StochasticBAProblem::EvaluateEcEc(size_t pose_index1, size_t pose_index2, M
     return true;
 }
 
-void StochasticBAProblem::EvaluateEcEc(std::vector<size_t> const & pose_indexes, MatX & EcEc) const
+void StochasticBAProblem::EvaluateEcEc(std::vector<size_t> const &pose_indexes, MatX &EcEc) const
 {
     size_t pose_num = pose_indexes.size();
     EcEc = MatX::Zero(pose_num * 6, pose_num * 6);
 
-    if (pose_indexes.empty())   return;
+    if (pose_indexes.empty())
+        return;
 
     size_t cluster_index = GetPoseCluster(pose_indexes[0]);
     std::unordered_map<size_t, size_t> local_pose_map;
@@ -433,13 +431,13 @@ void StochasticBAProblem::EvaluateEcEc(std::vector<size_t> const & pose_indexes,
         local_pose_map[pose_index] = i;
     }
 
-    std::vector<size_t> const & points = cluster_points_[cluster_index];
+    std::vector<size_t> const &points = cluster_points_[cluster_index];
     for (size_t i = 0; i < points.size(); i++)
     {
         size_t point_index = points[i];
-        std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(point_index);
+        std::unordered_map<size_t, std::unordered_map<size_t, size_t>>::const_iterator it1 = point_projection_map_.find(point_index);
         assert(it1 != point_projection_map_.end() && "[EvaluateEcEc] Point index not found");
-        std::unordered_map<size_t, size_t> const & map = it1->second;
+        std::unordered_map<size_t, size_t> const &map = it1->second;
         std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
         std::vector<size_t> cluster_pose_indexes, cluster_proj_indexes;
         for (; it2 != map.end(); it2++)
@@ -486,17 +484,18 @@ void StochasticBAProblem::EvaluateEcEc(std::vector<size_t> const & pose_indexes,
     }
 }
 
-void StochasticBAProblem::EvaluateEDeltaPose(size_t point_index, size_t cluster_index, Vec3 & Edy) const
+void StochasticBAProblem::EvaluateEDeltaPose(size_t point_index, size_t cluster_index, Vec3 &Edy) const
 {
     Edy = Vec3::Zero();
-    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(point_index);
+    std::unordered_map<size_t, std::unordered_map<size_t, size_t>>::const_iterator it1 = point_projection_map_.find(point_index);
     assert(it1 != point_projection_map_.end() && "[EvaluateEDeltaPose] Point index not found");
-    std::unordered_map<size_t, size_t> const & map = it1->second;
+    std::unordered_map<size_t, size_t> const &map = it1->second;
     std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
     for (; it2 != map.end(); it2++)
     {
         size_t pose_index = it2->first;
-        if (GetPoseCluster(pose_index) != cluster_index)    continue;
+        if (GetPoseCluster(pose_index) != cluster_index)
+            continue;
         size_t proj_index = it2->second;
         Mat63 JcJp;
         Vec6 dy;
@@ -509,25 +508,14 @@ void StochasticBAProblem::EvaluateEDeltaPose(size_t point_index, size_t cluster_
 /*!
  * @brief S dy = b, omitting intrinsic blocks here
  */
-bool StochasticBAProblem::EvaluateDeltaPose(std::vector<size_t> const & pose_indexes, VecX const & b, VecX & dy) const
+bool StochasticBAProblem::EvaluateDeltaPose(std::vector<size_t> const &pose_indexes, VecX const &b, VecX &dy) const
 {
     bool ret;
     if (pose_indexes.size() < 5000)
     {
         MatX S;
         BAProblem::EvaluateSchurComplement(pose_indexes, S);
-        size_t pose_index = pose_indexes[4];
-        Mat6 JcJc;
-        GetJcJc(pose_index, JcJc);
-        std::cout << "JcJc:\n" << JcJc << "\n";
-        std::cout << S.rows() << "\t" << S.cols() << "\n";
-        std::cout << "S:\n" << S.block(0, 0, 24, 24) << "\n";
         ret = SolveLinearSystem(S, b, dy);
-
-        Vec6 dy0 = JcJc.inverse() * b.segment(24, 6);
-        std::cout << "dy0: " << dy0 << "\n";
-        std::cout << "dy0: " << dy.segment(24, 6) << "\n";
-        exit(0);
     }
     else
     {
@@ -539,19 +527,19 @@ bool StochasticBAProblem::EvaluateDeltaPose(std::vector<size_t> const & pose_ind
     return ret;
 }
 
-void StochasticBAProblem::EvaluateSchurComplement(std::vector<std::unordered_map<size_t, Mat6> > & S) const
+void StochasticBAProblem::EvaluateSchurComplement(std::vector<std::unordered_map<size_t, Mat6>> &S) const
 {
     size_t pose_num = PoseNum();
     S.clear();
     S.resize(pose_num);
 
-    std::vector<std::pair<size_t, size_t> > pose_pairs;
-    std::unordered_map<size_t, std::unordered_map<size_t, std::vector<size_t> > >::const_iterator it1 = common_point_map_.begin();
+    std::vector<std::pair<size_t, size_t>> pose_pairs;
+    std::unordered_map<size_t, std::unordered_map<size_t, std::vector<size_t>>>::const_iterator it1 = common_point_map_.begin();
     for (; it1 != common_point_map_.end(); it1++)
     {
         size_t pose_index1 = it1->first;
-        std::unordered_map<size_t, std::vector<size_t> > const & map = it1->second;
-        std::unordered_map<size_t, std::vector<size_t> >::const_iterator it2 = map.begin();
+        std::unordered_map<size_t, std::vector<size_t>> const &map = it1->second;
+        std::unordered_map<size_t, std::vector<size_t>>::const_iterator it2 = map.begin();
         for (; it2 != map.end(); it2++)
         {
             size_t pose_index2 = it2->first;
@@ -568,9 +556,6 @@ void StochasticBAProblem::EvaluateSchurComplement(std::vector<std::unordered_map
         }
     }
 
-#ifdef OPENMP
-#pragma omp parallel for
-#endif
     for (size_t i = 0; i < pose_pairs.size(); i++)
     {
         size_t pose_index1 = pose_pairs[i].first;
@@ -592,116 +577,26 @@ void StochasticBAProblem::EvaluateSchurComplement(std::vector<std::unordered_map
             }
         }
     }
-
 }
 
-void StochasticBAProblem::EvaluateSchurComplement(std::vector<MatX> & S_mats) const
-{
-    size_t cluster_num = cluster_poses_.size();
-    S_mats.resize(cluster_num);
-
-    std::vector<size_t> local_pose_map(PoseNum());
-    for (size_t i = 0; i < cluster_num; i++)
-    {
-        std::vector<size_t> const & pose_indexes = cluster_poses_[i];
-        size_t cluster_pose_num = pose_indexes.size();
-        S_mats[i] = MatX::Zero(cluster_pose_num * 6, cluster_pose_num * 6);
-        for (size_t j = 0; j < cluster_pose_num; j++)
-        {
-            size_t pose_index = pose_indexes[j];
-            local_pose_map[pose_index] = j;
-            Mat6 JcJc;
-            GetJcJc(pose_index, JcJc);
-            S_mats[i].block(j * 6, j * 6, 6, 6) = JcJc;
-        }
-    }
-
-    size_t point_num = PointNum();
-#ifdef OPENMP
-#pragma omp parallel for
-#endif
-    for (size_t i = 0; i < point_num; i++)
-    {
-        std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(i);
-        assert(it1 != point_projection_map_.end() && "[EvaluateSchurComplement] Point index not found");
-        std::unordered_map<size_t, size_t> const & map = it1->second;
-        std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
-        std::vector<size_t> pose_indexes, proj_indexes;
-        for (; it2 != map.end(); it2++)
-        {
-            size_t pose_index = it2->first;
-            size_t proj_index = it2->second;
-            pose_indexes.push_back(pose_index);
-            proj_indexes.push_back(proj_index);
-        }
-        Mat3 JpJp, JpJp_inv;
-        BAProblem::GetJpJp(i, JpJp);
-        JpJp_inv = JpJp.inverse();
-        if (IsNumericalValid(JpJp_inv))
-        {
-            for (size_t j = 0; j < pose_indexes.size(); j++)
-            {
-                size_t pose_index1 = pose_indexes[j];
-                size_t proj_index1 = proj_indexes[j];
-                size_t cluster_index1 = pose_cluster_map_[pose_index1];
-                size_t local_pose_index1 = local_pose_map[pose_index1];
-                Mat63 Jc1Jp;
-                GetJcJp(proj_index1, Jc1Jp);
-                for (size_t k = j; k < pose_indexes.size(); k++)
-                {
-                    size_t pose_index2 = pose_indexes[k];
-                    size_t proj_index2 = proj_indexes[k];
-                    size_t cluster_index2 = pose_cluster_map_[pose_index2];
-                    size_t local_pose_index2 = local_pose_map[pose_index2];
-                    if (cluster_index1 != cluster_index2)
-                        continue;
-                    Mat63 Jc2Jp;
-                    GetJcJp(proj_index2, Jc2Jp);
-                    Mat6 ece = Jc1Jp * JpJp_inv * Jc2Jp.transpose();
-
-                    MatX & cluster_S = S_mats[cluster_index1];
-//#ifdef OPENMP
-//#pragma omp critical
-//#endif
-                    {
-                        cluster_S.block(local_pose_index1 * 6, local_pose_index2 * 6, 6, 6) -= ece;
-                    }
-                    if (pose_index1 != pose_index2)
-                    {
-//#ifdef OPENMP
-//#pragma omp critical
-//#endif
-                        {
-                            cluster_S.block(local_pose_index2 * 6, local_pose_index1 * 6, 6, 6) -= ece.transpose();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-}
-
-void StochasticBAProblem::EvaluateSdy(std::vector<std::unordered_map<size_t, Mat6> > const & S,
-                                      VecX const & dy, VecX & Sdy) const
+void StochasticBAProblem::EvaluateSdy(std::vector<std::unordered_map<size_t, Mat6>> const &S,
+                                      VecX const &dy, VecX &Sdy) const
 {
     size_t pose_num = PoseNum();
     assert(S.size() == pose_num);
     assert(dy.rows() == pose_num * 6);
     Sdy = VecX::Zero(pose_num * 6);
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < pose_num; i++)
     {
         Vec6 local_Sdy = Vec6::Zero();
-        std::unordered_map<size_t, Mat6> const & local_S = S[i];
+        std::unordered_map<size_t, Mat6> const &local_S = S[i];
         std::unordered_map<size_t, Mat6>::const_iterator it = local_S.begin();
         for (; it != local_S.end(); it++)
         {
             size_t pose_index = it->first;
-            Mat6 const & block = it->second;
+            Mat6 const &block = it->second;
             Vec6 local_dy = dy.segment(pose_index * 6, 6);
             local_Sdy += block * local_dy;
         }
@@ -709,7 +604,7 @@ void StochasticBAProblem::EvaluateSdy(std::vector<std::unordered_map<size_t, Mat
     }
 }
 
-void StochasticBAProblem::InnerIteration(VecX & dy) const
+void StochasticBAProblem::InnerIteration(VecX &dy) const
 {
     for (size_t i = 0; i < inner_step_; i++)
     {
@@ -731,14 +626,13 @@ void StochasticBAProblem::InnerIteration(VecX & dy) const
     }
 }
 
-void StochasticBAProblem::EvaluateFullb(VecX & b) const
+void StochasticBAProblem::EvaluateFullb(VecX &b) const
 {
     VecX Jce, ecw;
     GetJce(Jce);
     ecw.resize(PoseNum() * 6);
-#ifdef OPENMP
+
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < PoseNum(); i++)
     {
         Vec6 local_ecw;
@@ -757,49 +651,42 @@ bool StochasticBAProblem::EvaluateDeltaPose()
         EvaluateFullb(full_b_);
     }
 
-    for (size_t b = 0; b < batch_size_; b++)
+    // Compute initial steps
+    RunCluster();
+    EvaluateJpJp();
+    AugmentPointDiagonal();
+    EvaluateJpe();
+    if (mu_ <= 1.0)
+        SteepestDescentCorrection();
+    BAProblem::EvaluateEcw();
+
+    size_t cluster_num = cluster_poses_.size();
+    size_t sum_broken = 0;
+
+#pragma omp parallel for reduction(+: sum_broken)
+    for (size_t i = 0; i < cluster_num; i++)
     {
-        VecX local_dy = VecX::Zero(PoseNum() * 6);
-
-        // Compute initial steps
-        RunCluster();
-        EvaluateJpJp();
-        AugmentPointDiagonal();
-        EvaluateJpe();
-        BAProblem::EvaluateEcw();
-
-        size_t cluster_num = cluster_poses_.size();
-        size_t sum_broken = 0;
-
-#ifdef OPENMP
-#pragma omp parallel for reduction(+:sum_broken)
-#endif
-        for (size_t i = 0; i < cluster_num; i++)
+        std::vector<size_t> const &pose_cluster = cluster_poses_[i];
+        VecX cluster_dy;
+        if (!BAProblem::EvaluateDeltaPose(pose_cluster, cluster_dy))
         {
-            std::vector<size_t> const & pose_cluster = cluster_poses_[i];
-            VecX cluster_dy;
-            if (!BAProblem::EvaluateDeltaPose(pose_cluster, cluster_dy))
-            {
-                std::cout << "[EvaluateDeltaPose] Fail in solver linear system.\n";
-                sum_broken += 1;
-            }
-            for (size_t j = 0; j < pose_cluster.size(); j++)
-            {
-                size_t pose_index = pose_cluster[j];
-                local_dy.segment(pose_index * 6, 6) += cluster_dy.segment(j * 6, 6);
-            }
+            std::cout << "[EvaluateDeltaPose] Fail in solver linear system.\n";
+            sum_broken += 1;
         }
-        if (sum_broken != 0)
+        for (size_t j = 0; j < pose_cluster.size(); j++)
         {
-            std::cout << "[StochasticBAProblem::EvaluateDeltaPose] Fail in computing initial step.\n";
-            return false;
+            size_t pose_index = pose_cluster[j];
+            dy.segment(pose_index * 6, 6) += cluster_dy.segment(j * 6, 6);
         }
-
-        InnerIteration(local_dy);
-        dy += local_dy;
+    }
+    if (sum_broken != 0)
+    {
+        std::cout << "[StochasticBAProblem::EvaluateDeltaPose] Fail in computing initial step.\n";
+        return false;
     }
 
-    dy = dy / double(batch_size_);
+    InnerIteration(dy);
+
     for (size_t i = 0; i < PoseNum(); i++)
     {
         Vec3 angle_axis = dy.segment(i * 6, 3);
@@ -810,12 +697,12 @@ bool StochasticBAProblem::EvaluateDeltaPose()
     return true;
 }
 
-void StochasticBAProblem::EvaluateDeltaPoint(size_t point_index, Vec3 & dz)
+void StochasticBAProblem::EvaluateDeltaPoint(size_t point_index, Vec3 &dz)
 {
     dz = Vec3::Zero();
     Mat3 sum_JpJp = Mat3::Zero();
 
-    std::vector<size_t> const & cluster_indexes = point_cluster_map_[point_index];
+    std::vector<size_t> const &cluster_indexes = point_cluster_map_[point_index];
     size_t cluster_num = cluster_indexes.size();
     assert(cluster_num > 0 && "[EvaluateDeltaPoint] Zero cluster number");
 
@@ -853,9 +740,7 @@ void StochasticBAProblem::EvaluateDeltaPoint()
 {
     size_t point_num = PointNum();
 
-#ifdef OPENMP
 #pragma omp parallel for
-#endif
     for (size_t i = 0; i < point_num; i++)
     {
         Vec3 dz;
@@ -864,13 +749,13 @@ void StochasticBAProblem::EvaluateDeltaPoint()
     }
 }
 
-void StochasticBAProblem::EvaluateEcw(size_t pose_index, Vec6 & Ecw) const
+void StochasticBAProblem::EvaluateEcw(size_t pose_index, Vec6 &Ecw) const
 {
     Ecw = Vec6::Zero();
     size_t pose_cluster_index = GetPoseCluster(pose_index);
-    std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = pose_projection_map_.find(pose_index);
+    std::unordered_map<size_t, std::unordered_map<size_t, size_t>>::const_iterator it1 = pose_projection_map_.find(pose_index);
     assert(it1 != pose_projection_map_.end() && "[EvaluateECw] Pose index not found");
-    std::unordered_map<size_t, size_t> const & map = it1->second;
+    std::unordered_map<size_t, size_t> const &map = it1->second;
     std::unordered_map<size_t, size_t>::const_iterator it2 = map.begin();
     for (; it2 != map.end(); it2++)
     {
@@ -892,8 +777,8 @@ void StochasticBAProblem::EvaluateEcw(size_t pose_index, Vec6 & Ecw) const
     }
 }
 
-double StochasticBAProblem::EvaluateRSquare(VecX const & aug_pose_diagonal,
-                                            std::vector<std::vector<Vec3> > const & aug_point_diagonal) const
+double StochasticBAProblem::EvaluateRSquare(VecX const &aug_pose_diagonal,
+                                            std::vector<std::vector<Vec3>> const &aug_point_diagonal) const
 {
     double R = 0;
     size_t proj_num = ProjectionNum();
@@ -931,7 +816,7 @@ double StochasticBAProblem::EvaluateRSquare(VecX const & aug_pose_diagonal,
     size_t point_num = PointNum();
     for (size_t i = 0; i < point_num; i++)
     {
-        std::vector<Vec3> const & diagonals = aug_point_diagonal[i];
+        std::vector<Vec3> const &diagonals = aug_point_diagonal[i];
         for (size_t j = 0; j < diagonals.size(); j++)
         {
             Vec3 aug_diagonal = diagonals[j];
@@ -944,7 +829,7 @@ double StochasticBAProblem::EvaluateRSquare(VecX const & aug_pose_diagonal,
     return R;
 }
 
-double StochasticBAProblem::EvaluateRSquare2(VecX const & aug_diagonal)
+double StochasticBAProblem::EvaluateRSquare2(VecX const &aug_diagonal)
 {
     double R = 0;
     size_t proj_num = ProjectionNum();
@@ -1004,7 +889,7 @@ bool StochasticBAProblem::StepAccept()
     return last_square_error_ > square_error_;
 }
 
-bool StochasticBAProblem::Initialize(BundleBlock const & bundle_block)
+bool StochasticBAProblem::Initialize(BundleBlock const &bundle_block)
 {
     if (!BAProblem::Initialize(bundle_block))
         return false;
@@ -1015,22 +900,23 @@ bool StochasticBAProblem::Initialize(BundleBlock const & bundle_block)
 void StochasticBAProblem::InitializeCluster()
 {
     std::vector<size_t> nodes(PoseNum());
-    std::unordered_map<size_t, std::unordered_map<size_t, double> > edges;
+    std::unordered_map<size_t, std::unordered_map<size_t, double>> edges;
     std::iota(nodes.begin(), nodes.end(), 0);
 
-    std::unordered_map<size_t, std::unordered_map<size_t, std::vector<size_t> > >::const_iterator it1 = common_point_map_.begin();
+    std::unordered_map<size_t, std::unordered_map<size_t, std::vector<size_t>>>::const_iterator it1 = common_point_map_.begin();
     for (; it1 != common_point_map_.end(); it1++)
     {
         size_t pose_index1 = it1->first;
         size_t point_num1 = pose_projection_map_.find(pose_index1)->second.size();
         std::unordered_map<size_t, double> edge_map;
-        std::unordered_map<size_t, std::vector<size_t> > const & map = it1->second;
-        std::unordered_map<size_t, std::vector<size_t> >::const_iterator it2 = map.begin();
+        std::unordered_map<size_t, std::vector<size_t>> const &map = it1->second;
+        std::unordered_map<size_t, std::vector<size_t>>::const_iterator it2 = map.begin();
         for (; it2 != map.end(); it2++)
         {
             size_t pose_index2 = it2->first;
-            if (pose_index1 == pose_index2) continue;
-            std::vector<size_t> const & points = it2->second;
+            if (pose_index1 == pose_index2)
+                continue;
+            std::vector<size_t> const &points = it2->second;
             size_t point_num2 = pose_projection_map_.find(pose_index2)->second.size();
             edge_map[pose_index2] = double(points.size()) / (point_num1 + point_num2 - points.size());
         }
@@ -1041,7 +927,7 @@ void StochasticBAProblem::InitializeCluster()
 
 void StochasticBAProblem::RunCluster()
 {
-    std::vector<std::pair<size_t, size_t> > initial_pairs;
+    std::vector<std::pair<size_t, size_t>> initial_pairs;
     cluster_->GetEdgesAcrossClusters(initial_pairs);
     cluster_->Reinitialize();
     if (complementary_clustering_)
@@ -1055,7 +941,7 @@ void StochasticBAProblem::RunCluster()
         size_t index2 = initial_pairs[i].second;
         broken_edge_weight += cluster_->EdgeWeight(index1, index2);
     }
-//    connectivity_sample_ratio_ = 1.0 - broken_edge_weight / cluster_->SumEdgeWeight();
+    //    connectivity_sample_ratio_ = 1.0 - broken_edge_weight / cluster_->SumEdgeWeight();
     connectivity_sample_ratio_ = 1.0 - initial_pairs.size() / double(cluster_->EdgeNum());
 
     cluster_->GetClusters(cluster_poses_);
@@ -1063,7 +949,7 @@ void StochasticBAProblem::RunCluster()
     pose_cluster_map_.resize(PoseNum(), 0);
     for (size_t i = 0; i < cluster_num; i++)
     {
-        std::vector<size_t> const & pose_cluster = cluster_poses_[i];
+        std::vector<size_t> const &pose_cluster = cluster_poses_[i];
         for (size_t j = 0; j < pose_cluster.size(); j++)
         {
             size_t pose_index = pose_cluster[j];
@@ -1099,7 +985,7 @@ void StochasticBAProblem::Print()
     double max_gradient = MaxGradient();
     double step = Step();
     double modualarity = cluster_->Modularity();
-    std::vector<std::vector<size_t> > clusters;
+    std::vector<std::vector<size_t>> clusters;
     cluster_->GetClusters(clusters);
     double mean_error, median_error, max_error;
     ReprojectionError(mean_error, median_error, max_error, true);
@@ -1112,13 +998,9 @@ void StochasticBAProblem::Print()
     std::stringstream local_stream;
     local_stream << std::setprecision(3) << std::scientific
                  << status << std::left << std::setw(3) << iter_ << ", "
-                 << "d: " << std::setw(width+1) << delta_loss << ", "
+                 << "d: " << std::setw(width + 1) << delta_loss << ", "
                  << "F0: " << std::setw(width) << last_square_error_ << ", "
-                 << "F1: " << std::setw(width) << square_error_ << ", "
-//                 << "f0^2: " << std::setw(width) << last_square_residual_ << ", "
-//                 << "f1^2: " << std::setw(width) << square_residual_ << ", "
-//                 << "R^2: " << std::setw(width) << R_square_ << ", "
-//                 << "phi: " << std::setw(width+1) << phi_ << ", "
+                 << "F1: " << std::setw(width) << square_error_ << ", ""
                  << "g: " << std::setw(width) << max_gradient << ", "
                  << "mu: " << std::setw(width) << mu_ << ", "
                  << "h: " << std::setw(width) << step << ", "
@@ -1136,10 +1018,10 @@ void StochasticBAProblem::Print()
     stream_ << local_stream.str();
 }
 
-void StochasticBAProblem::SaveCameraCluster(std::string const & save_path)
+void StochasticBAProblem::SaveCameraCluster(std::string const &save_path)
 {
     size_t camera_num = PoseNum();
-    std::vector<std::vector<size_t> > clusters;
+    std::vector<std::vector<size_t>> clusters;
     cluster_->GetClusters(clusters);
     size_t cluster_num = clusters.size();
 
@@ -1149,7 +1031,7 @@ void StochasticBAProblem::SaveCameraCluster(std::string const & save_path)
     for (size_t i = 0; i < cluster_num; i++)
     {
         size_t cluster_index = i;
-        std::vector<size_t> const & camera_indexes = clusters[i];
+        std::vector<size_t> const &camera_indexes = clusters[i];
         for (size_t j = 0; j < camera_indexes.size(); j++)
         {
             size_t camera_index = camera_indexes[j];
@@ -1164,14 +1046,74 @@ void StochasticBAProblem::SaveCameraCluster(std::string const & save_path)
             pose_block_.GetPose(camera_index, angle_axis, translation);
             Mat3 rotation = AngleAxis2Matrix(angle_axis);
             Vec3 center = -rotation.transpose() * translation;
-            fout << rotation << "\n" << center(0) << " " << center(1) << " " << center(2) << "\n";
+            fout << rotation << "\n"
+                 << center(0) << " " << center(1) << " " << center(2) << "\n";
         }
     }
     fout.close();
 }
 
-void StochasticBAProblem::SamplingControl()
+void StochasticBAProblem::SteepestDescentCorrection(size_t const point_index)
 {
-//    if (iter_ % 30 == 0 && iter_ != 0)
-//        batch_size_ *= 2;
+    std::vector<size_t> const &cluster_indexes = point_cluster_map_[point_index];
+    size_t cluster_num = cluster_indexes.size();
+    assert(cluster_num > 0 && "[EvaluateDeltaPoint] Zero cluster number");
+
+    if (cluster_num == 1)
+        return;
+
+    MatX H = MatX::Zero(3 * (cluster_num - 1), 3 * cluster_num);
+    for (size_t i = 0; i < cluster_num - 1; i++)
+    {
+        for (size_t j = 0; j < 3; j++)
+        {
+            H(i * 3 + j, j) = 1;
+            H(i * 3 + j, (i + 1) * 3 + j) = -1;
+        }
+    }
+
+    VecX C_inv_g = VecX::Zero(3 * cluster_num);
+    MatX C_inv = MatX::Identity(3 * cluster_num, 3 * cluster_num);
+    for (size_t i = 0; i < cluster_num; i++)
+    {
+        Mat3 JpJp;
+        GetJpJp(point_index, i, JpJp);
+
+        Vec3 Jpe;
+        GetJpe(point_index, i, Jpe);
+
+        for (size_t j = 0; j < 3; j++)
+        {
+            if (JpJp(j, j) < EPSILON)
+                return;
+            C_inv(3 * i + j, 3 * i + j) = 1.0 / JpJp(j, j);
+            C_inv_g(3 * i + j) = Jpe(j) / JpJp(j, j);
+        }
+    }
+
+    MatX HCH = H * C_inv * H.transpose();
+    MatX HCH_inv = HCH.inverse();
+    VecX g_correct = -H.transpose() * HCH_inv * H * C_inv_g;
+    if (!IsNumericalValid(g_correct))
+    {
+        std::cout << "[StochasticBAProblem::GradientCorrection] Numerical invalid.\n";
+        return;
+    }
+    for (size_t i = 0; i < cluster_num; i++)
+    {
+        Vec3 Jpe;
+        GetJpe(point_index, i, Jpe);
+        SetJpe(point_index, i, Jpe + g_correct.segment(3 * i, 3));
+    }
+}
+
+void StochasticBAProblem::SteepestDescentCorrection()
+{
+    size_t point_num = PointNum();
+
+#pragma omp parallel for
+    for (size_t i = 0; i < point_num; i++)
+    {
+        SteepestDescentCorrection(i);
+    }
 }

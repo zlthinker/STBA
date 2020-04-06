@@ -59,7 +59,6 @@ protected:
     virtual bool EvaluateEcEc(size_t pose_index1, size_t pose_index2, Mat6 & EcEc) const;
     virtual void EvaluateEcEc(std::vector<size_t> const & pose_indexes, MatX & EcEc) const;
     void EvaluateSchurComplement(std::vector<std::unordered_map<size_t, Mat6> > & S) const;
-    void EvaluateSchurComplement(std::vector<MatX> & S_mats) const;
     void EvaluateFullb(VecX & b) const;
     void EvaluateSdy(std::vector<std::unordered_map<size_t, Mat6> > const & S, VecX const & dy, VecX & Sdy) const;
     virtual void AugmentPointDiagonal();
@@ -72,12 +71,13 @@ protected:
     void SetDeltaPoint(size_t point_index, size_t cluster_index, Vec3 const & dz);
     void ClearPointMeta();
     void InnerIteration(VecX & dy) const;
+    void SteepestDescentCorrection(size_t const point_index);
+    void SteepestDescentCorrection();
 
 private:
     void InitializeCluster();
     void RunCluster();
     virtual void Print();
-    void SamplingControl();
 
 private:
     Louvain * cluster_;

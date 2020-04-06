@@ -117,7 +117,6 @@ void LMBAProblem::Solve()
 void LMBAProblem::DecreaseRadius()
 {
     mu_ /= decrease_factor_;
-//    decrease_factor_ *= 2;
 }
 
 /*!
@@ -125,7 +124,7 @@ void LMBAProblem::DecreaseRadius()
  */
 void LMBAProblem::IncreaseRadius()
 {
-    double factor = 1/3.0; //std::max(1/3.0, 1 - std::pow((2 * rho_ - 1), 3));
+    double factor = 1/3.0;
     mu_ = std::min(1e32, mu_ / factor);
     decrease_factor_ = 3.0;
 }
