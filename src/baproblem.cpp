@@ -107,6 +107,11 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block)
     std::vector<size_t> camera_indexes = bundle_block.CameraIndexes();
     std::vector<size_t> point_indexes = bundle_block.TrackIndexes();
     std::vector<size_t> projection_indexes = bundle_block.ProjectionIndexes();
+    std::sort(group_indexes.begin(), group_indexes.end());
+    std::sort(camera_indexes.begin(), camera_indexes.end());
+    std::sort(point_indexes.begin(), point_indexes.end());
+    std::sort(projection_indexes.begin(), projection_indexes.end());
+
     size_t group_num = group_indexes.size();
     size_t pose_num = camera_indexes.size();
     size_t point_num = point_indexes.size();
@@ -183,15 +188,16 @@ bool BAProblem::Initialize(BundleBlock const & bundle_block)
             size_t pose_index2 = pose_map[camera_index2];
             if (pose_index1 > pose_index2)  continue;
             std::vector<size_t> const & track_indexes = it2->second;
-            std::vector<size_t> point_indexes;
-            point_indexes.reserve(track_indexes.size());
+            std::unordered_set<size_t> point_index_set;
             for (size_t i = 0; i < track_indexes.size(); i++)
             {
                 size_t track_index = track_indexes[i];
                 assert(point_map.find(track_index) != point_map.end());
                 size_t point_index = point_map[track_index];
                 point_indexes.push_back(point_index);
+                point_index_set.insert(point_index);
             }
+            std::vector<size_t> point_indexes(point_index_set.begin(), point_index_set.end());
             SetCommonPoints(pose_index1, pose_index2, point_indexes);
         }
     }
@@ -1193,9 +1199,6 @@ void BAProblem::EvaluateEcEc(MatX & EcEc) const
     EcEc = MatX::Zero(pose_num * 6, pose_num * 6);
 
     size_t point_num = PointNum();
-#ifdef OPENMP
-#pragma omp parallel for
-#endif
     for (size_t i = 0; i < point_num; i++)
     {
         std::unordered_map<size_t, std::unordered_map<size_t, size_t> >::const_iterator it1 = point_projection_map_.find(i);

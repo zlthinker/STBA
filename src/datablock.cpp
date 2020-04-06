@@ -278,8 +278,8 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
                 DTrack & track = tracks_[track_idx];
                 track.linked_projections.insert(projection_id);
                 projection_id++;
-                cameras_[image_idx] = camera;
             }
+            cameras_[image_idx] = camera;
         }
     }
 
@@ -310,6 +310,7 @@ bool BundleBlock::LoadColmapTxt(std::string const & cameras_path, std::string co
             if (tracks_.find(track_idx) == tracks_.end())
             {
                 std::cout << "cannot find the track " << track_idx << std::endl;
+                continue;
             }
             DTrack & track = tracks_[track_idx];
             track.position = Vec3(px, py, pz);
