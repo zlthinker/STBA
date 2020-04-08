@@ -55,7 +55,9 @@ The ```0.0.0``` codes are based on the plain workflow of an Levenberg-Marquardt 
 	* `--lm`: Use Levenberg-Marquardt solver.
 	* `--dl`: Use DogLeg solver.
 
+### TODO
 
+* Add parallel support to version ```1.0.0```, particularly the function ```StochasticBAProblem::EvaluateCamera()```.
 
 
 
