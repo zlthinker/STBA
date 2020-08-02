@@ -1,5 +1,5 @@
 # STBA
-This is a C++ implementation of "Stochastic Bundle Adjustment for Efficient and Scalable Structure from Motion".
+This is a C++ implementation of our ECCV 2020 paper: "Stochastic Bundle Adjustment for Efficient and Scalable 3D Reconstruction".
 
 ## About
 
