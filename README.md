@@ -1,5 +1,5 @@
 # STBA
-This is a C++ implementation of our ECCV 2020 paper: "Stochastic Bundle Adjustment for Efficient and Scalable 3D Reconstruction" by Lei Zhou, Zixin Luo, Mingmin Zhen, Tianwei Shen, Shiwei Li, Zhuofei Huang, Tian Fang, Long Quan.
+This is a C++ implementation of our ECCV 2020 paper - ["Stochastic Bundle Adjustment for Efficient and Scalable 3D Reconstruction"](https://arxiv.org/abs/2008.00446) by Lei Zhou, Zixin Luo, Mingmin Zhen, Tianwei Shen, Shiwei Li, Zhuofei Huang, Tian Fang, Long Quan.
 
 ## About
 
